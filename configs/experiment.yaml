@@ -1,0 +1,40 @@
+model: 
+  name: "AutoModel"
+  version: "1.0"
+  description: "An automated modeling tool for data processing, feature selection, and model training."
+  
+data:
+  input_path: "data/input/"
+  output_path: "data/output/"
+  train_test_split_ratio: 0.8
+
+features:
+  selection:
+    method: "recursive_feature_elimination"
+    threshold: 0.05
+  generation:
+    polynomial_features: true
+    interaction_terms: true
+
+modeling:
+  algorithms:
+    - name: "Logistic Regression"
+      parameters:
+        C: 1.0
+        solver: "liblinear"
+    - name: "Decision Tree"
+      parameters:
+        max_depth: 5
+        min_samples_split: 2
+    - name: "XGBoost"
+      parameters:
+        learning_rate: 0.1
+        n_estimators: 100
+
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1_score"
+  report_path: "reports/evaluation_report.txt"

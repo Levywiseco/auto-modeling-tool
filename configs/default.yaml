@@ -1,0 +1,24 @@
+default_config:
+  data:
+    path: "data/dataset.csv"
+    target_column: "target"
+    test_size: 0.2
+    random_state: 42
+  preprocessing:
+    handle_missing: true
+    normalize: true
+  feature_selection:
+    method: "recursive_elimination"
+    threshold: 0.05
+  modeling:
+    model_type: "logistic"
+    hyperparameters:
+      C: 1.0
+      max_iter: 100
+  evaluation:
+    metrics:
+      - "accuracy"
+      - "precision"
+      - "recall"
+      - "f1_score"
+    report_path: "reports/evaluation_report.txt"
