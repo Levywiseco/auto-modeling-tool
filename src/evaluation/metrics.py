@@ -15,10 +15,6 @@ from ..core.logger import logger
 from ..core.decorators import time_it
 
 
-# =============================================================================
-# Basic Metrics (Polars-optimized)
-# =============================================================================
-
 def accuracy(
     y_true: Union[pl.Series, np.ndarray, List],
     y_pred: Union[pl.Series, np.ndarray, List],
@@ -188,10 +184,6 @@ def confusion_matrix(
     return {'TP': tp, 'TN': tn, 'FP': fp, 'FN': fn}
 
 
-# =============================================================================
-# Advanced Metrics
-# =============================================================================
-
 @time_it
 def calculate_auc_roc(
     y_true: Union[pl.Series, np.ndarray, List],
@@ -251,7 +243,6 @@ def calculate_ks(
     y_true = _to_series(y_true, "y_true")
     y_score = _to_series(y_score, "y_score")
     
-    # Create DataFrame for vectorized calculation
     df = pl.DataFrame({
         "target": y_true,
         "score": y_score
@@ -263,7 +254,6 @@ def calculate_ks(
     if n_pos == 0 or n_neg == 0:
         return 0.0, 0.0
     
-    # Calculate cumulative distributions
     df = df.with_columns([
         (pl.col("target") == 1).cum_sum().alias("cum_pos"),
         (pl.col("target") == 0).cum_sum().alias("cum_neg"),
@@ -274,7 +264,6 @@ def calculate_ks(
         (pl.col("tpr") - pl.col("fpr")).abs().alias("ks_diff")
     ])
     
-    # Find max KS
     max_idx = df["ks_diff"].arg_max()
     ks_stat = df["ks_diff"][max_idx]
     ks_threshold = df["score"][max_idx]
@@ -365,6 +354,178 @@ def calculate_lift(
 
 
 @time_it
+def calculate_psi(
+    expected: Union[pl.Series, np.ndarray, List],
+    actual: Union[pl.Series, np.ndarray, List],
+    *,
+    n_bins: int = 10,
+    bin_type: str = "quantile",
+    epsilon: float = 1e-10,
+) -> Tuple[float, pl.DataFrame]:
+    """
+    Calculate Population Stability Index (PSI).
+    
+    PSI measures the shift in distribution between two populations
+    (e.g., training vs. validation data).
+    
+    PSI Interpretation:
+    - PSI < 0.1: No significant change
+    - 0.1 <= PSI < 0.25: Moderate change, investigation needed
+    - PSI >= 0.25: Significant change, action required
+    
+    Parameters
+    ----------
+    expected : array-like
+        Expected (baseline) distribution (e.g., training data).
+    actual : array-like
+        Actual distribution to compare (e.g., validation data).
+    n_bins : int, default 10
+        Number of bins for distribution comparison.
+    bin_type : str, default "quantile"
+        Binning strategy: "quantile" or "uniform".
+    epsilon : float, default 1e-10
+        Small value to prevent division by zero.
+        
+    Returns
+    -------
+    tuple of (psi_value, psi_table)
+        PSI value and detailed PSI table by bin.
+        
+    Example
+    -------
+    >>> psi, table = calculate_psi(train_scores, test_scores)
+    >>> print(f"PSI: {psi:.4f}")
+    >>> if psi < 0.1:
+    ...     print("No significant population shift")
+    """
+    expected = _to_series(expected, "expected")
+    actual = _to_series(actual, "actual")
+    
+    n_expected = len(expected)
+    n_actual = len(actual)
+    
+    if bin_type == "quantile":
+        quantiles = np.linspace(0, 1, n_bins + 1)
+        bin_edges = [expected.quantile(q) for q in quantiles]
+        bin_edges[0] = float('-inf')
+        bin_edges[-1] = float('inf')
+    else:
+        min_val = min(expected.min(), actual.min())
+        max_val = max(expected.max(), actual.max())
+        bin_edges = np.linspace(min_val, max_val, n_bins + 1)
+        bin_edges[0] = float('-inf')
+        bin_edges[-1] = float('inf')
+    
+    psi_total = 0.0
+    psi_data = []
+    
+    for i in range(n_bins):
+        lower = bin_edges[i]
+        upper = bin_edges[i + 1]
+        
+        if i == n_bins - 1:
+            exp_count = ((expected >= lower) & (expected <= upper)).sum()
+            act_count = ((actual >= lower) & (actual <= upper)).sum()
+        else:
+            exp_count = ((expected >= lower) & (expected < upper)).sum()
+            act_count = ((actual >= lower) & (actual < upper)).sum()
+        
+        exp_pct = (exp_count + epsilon) / n_expected
+        act_pct = (act_count + epsilon) / n_actual
+        
+        psi_bin = (act_pct - exp_pct) * np.log(act_pct / exp_pct)
+        psi_total += psi_bin
+        
+        psi_data.append({
+            "bin": i + 1,
+            "lower": lower if lower != float('-inf') else None,
+            "upper": upper if upper != float('inf') else None,
+            "expected_count": int(exp_count),
+            "actual_count": int(act_count),
+            "expected_pct": exp_pct,
+            "actual_pct": act_pct,
+            "psi": psi_bin,
+        })
+    
+    psi_table = pl.DataFrame(psi_data)
+    
+    logger.info(f"📊 PSI: {psi_total:.4f}")
+    
+    return psi_total, psi_table
+
+
+@time_it
+def calculate_feature_psi(
+    expected_df: pl.DataFrame,
+    actual_df: pl.DataFrame,
+    features: Optional[List[str]] = None,
+    *,
+    n_bins: int = 10,
+) -> pl.DataFrame:
+    """
+    Calculate PSI for multiple features.
+    
+    Parameters
+    ----------
+    expected_df : pl.DataFrame
+        Expected (baseline) DataFrame.
+    actual_df : pl.DataFrame
+        Actual DataFrame to compare.
+    features : list of str, optional
+        Features to calculate PSI for. If None, uses all numeric columns.
+    n_bins : int, default 10
+        Number of bins for PSI calculation.
+        
+    Returns
+    -------
+    pl.DataFrame
+        PSI table with columns: feature, psi, interpretation
+        
+    Example
+    -------
+    >>> psi_df = calculate_feature_psi(train_df, test_df)
+    >>> print(psi_df.filter(pl.col("psi") >= 0.25))
+    """
+    if features is None:
+        NUMERIC_DTYPES = {
+            pl.Int8, pl.Int16, pl.Int32, pl.Int64,
+            pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64,
+            pl.Float32, pl.Float64
+        }
+        features = [c for c in expected_df.columns if expected_df[c].dtype in NUMERIC_DTYPES]
+    
+    def interpret_psi(psi: float) -> str:
+        if psi < 0.1:
+            return "Stable"
+        elif psi < 0.25:
+            return "Moderate Shift"
+        else:
+            return "Significant Shift"
+    
+    results = []
+    
+    for feature in features:
+        if feature not in expected_df.columns or feature not in actual_df.columns:
+            continue
+        
+        try:
+            psi_val, _ = calculate_psi(
+                expected_df[feature],
+                actual_df[feature],
+                n_bins=n_bins
+            )
+            results.append({
+                "feature": feature,
+                "psi": psi_val,
+                "interpretation": interpret_psi(psi_val),
+            })
+        except Exception as e:
+            logger.warning(f"PSI calculation failed for {feature}: {e}")
+    
+    return pl.DataFrame(results).sort("psi", descending=True)
+
+
+@time_it
 def calculate_all_metrics(
     y_true: Union[pl.Series, np.ndarray, List],
     y_pred: Union[pl.Series, np.ndarray, List],
@@ -410,7 +571,6 @@ def calculate_all_metrics(
         "false_negative": cm["FN"],
     })
     
-    # Probability-based metrics
     if y_score is not None:
         metrics["auc_roc"] = calculate_auc_roc(y_true, y_score)
         
@@ -424,10 +584,6 @@ def calculate_all_metrics(
     
     return metrics
 
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
 
 def _to_series(data: Union[pl.Series, np.ndarray, List], name: str = "data") -> pl.Series:
     """Convert input to Polars Series."""

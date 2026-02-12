@@ -18,9 +18,12 @@ from ..core.decorators import time_it
 from ..core.exceptions import ValidationError
 
 
-# =============================================================================
-# Functional API
-# =============================================================================
+NUMERIC_DTYPES = {
+    pl.Int8, pl.Int16, pl.Int32, pl.Int64,
+    pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64,
+    pl.Float32, pl.Float64
+}
+
 
 @time_it
 def select_features(
@@ -69,11 +72,9 @@ def select_features(
     >>> selected = select_features(X, y, method="correlation")
     >>> X_selected = X.select(selected)
     """
-    # Materialize if LazyFrame
     if isinstance(X, pl.LazyFrame):
         X = X.collect()
     
-    # Convert y to numpy if needed
     if isinstance(y, pl.Series):
         y = y.to_numpy()
     
@@ -98,6 +99,11 @@ def select_features(
     return selected
 
 
+def _get_numeric_columns(X: pl.DataFrame) -> List[str]:
+    """Get numeric column names."""
+    return [c for c in X.columns if X[c].dtype in NUMERIC_DTYPES]
+
+
 def _select_rfe(
     X: pl.DataFrame, 
     y: np.ndarray, 
@@ -107,19 +113,13 @@ def _select_rfe(
     from sklearn.feature_selection import RFE
     from sklearn.linear_model import LogisticRegression
     
-    # Get numeric columns only
-    numeric_cols = [
-        c for c in X.columns
-        if X[c].dtype in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.Int16, pl.Int8]
-    ]
+    numeric_cols = _get_numeric_columns(X)
     
     if not numeric_cols:
         logger.warning("No numeric columns found for RFE")
         return []
     
     X_np = X.select(numeric_cols).to_numpy()
-    
-    # Handle NaN values
     X_np = np.nan_to_num(X_np, nan=0.0)
     
     model = LogisticRegression(max_iter=1000, solver='lbfgs', n_jobs=-1)
@@ -141,41 +141,25 @@ def _select_by_correlation(
     threshold: float
 ) -> List[str]:
     """
-    Remove highly correlated features using Polars vectorized operations.
+    Remove highly correlated features using optimized numpy computation.
     
-    Optimization: Uses Polars correlation matrix computation instead of
-    pandas, which is faster for large datasets.
+    Optimization: Uses numpy's corrcoef for O(n) matrix computation
+    instead of O(n²) pairwise correlation calculations.
     """
-    # Get numeric columns
-    numeric_cols = [
-        c for c in X.columns
-        if X[c].dtype in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.Int16, pl.Int8]
-    ]
+    numeric_cols = _get_numeric_columns(X)
     
     if len(numeric_cols) <= 1:
         return numeric_cols
     
     logger.info(f"   Computing correlation matrix for {len(numeric_cols)} features...")
     
-    # Compute correlation matrix using Polars
-    # For each pair, compute Pearson correlation
-    corr_data = {}
+    X_np = X.select(numeric_cols).to_numpy()
+    X_np = np.nan_to_num(X_np, nan=0.0)
     
-    for col in numeric_cols:
-        corr_data[col] = []
-        for other_col in numeric_cols:
-            if col == other_col:
-                corr_data[col].append(1.0)
-            else:
-                corr = X.select(
-                    pl.corr(col, other_col)
-                ).item()
-                corr_data[col].append(corr if corr is not None else 0.0)
+    corr_matrix = np.corrcoef(X_np.T)
     
-    # Build correlation matrix as numpy array for easier processing
-    corr_matrix = np.array([corr_data[c] for c in numeric_cols])
+    variances = np.var(X_np, axis=0)
     
-    # Find features to drop (upper triangle, excluding diagonal)
     to_drop = set()
     n = len(numeric_cols)
     
@@ -186,11 +170,7 @@ def _select_by_correlation(
             if numeric_cols[j] in to_drop:
                 continue
             if abs(corr_matrix[i, j]) > threshold:
-                # Drop the feature with lower variance
-                var_i = X.select(pl.col(numeric_cols[i]).var()).item() or 0
-                var_j = X.select(pl.col(numeric_cols[j]).var()).item() or 0
-                
-                if var_i < var_j:
+                if variances[i] < variances[j]:
                     to_drop.add(numeric_cols[i])
                 else:
                     to_drop.add(numeric_cols[j])
@@ -208,16 +188,11 @@ def _select_by_variance(
     threshold: float
 ) -> List[str]:
     """Select features with variance above threshold."""
-    # Get numeric columns
-    numeric_cols = [
-        c for c in X.columns
-        if X[c].dtype in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.Int16, pl.Int8]
-    ]
+    numeric_cols = _get_numeric_columns(X)
     
     if not numeric_cols:
         return []
     
-    # Compute variance for all columns in single pass
     var_exprs = [pl.col(c).var().alias(c) for c in numeric_cols]
     variances = X.select(var_exprs).row(0)
     
@@ -237,30 +212,22 @@ def _select_by_iv(
     threshold: float
 ) -> List[str]:
     """Select features by Information Value."""
-    from ..binning.utils import binning_with_woe
+    from ..binning.woe_binning import WoeBinner
     
-    # Get numeric columns
-    numeric_cols = [
-        c for c in X.columns
-        if X[c].dtype in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.Int16, pl.Int8]
-    ]
+    numeric_cols = _get_numeric_columns(X)
     
-    # Create temporary dataframe with target
-    temp_df = X.select(numeric_cols).with_columns(pl.Series("target", y))
+    if not numeric_cols:
+        return []
     
-    iv_results = {}
-    for col in numeric_cols:
-        try:
-            result = binning_with_woe(temp_df, "target", col, num_bins=10, method="quantile")
-            iv_results[col] = result['total_iv']
-        except Exception as e:
-            logger.warning(f"IV calculation failed for {col}: {e}")
-            iv_results[col] = 0.0
+    y_series = pl.Series("target", y)
     
-    selected = [col for col, iv in iv_results.items() if iv >= threshold]
+    binner = WoeBinner(n_bins=10, method="quantile")
+    binner.fit(X.select(numeric_cols), y_series)
     
-    # Sort by IV descending
-    selected.sort(key=lambda x: iv_results[x], reverse=True)
+    iv_results = binner.total_iv_
+    
+    selected = [col for col in numeric_cols if iv_results.get(col, 0) >= threshold]
+    selected.sort(key=lambda x: iv_results.get(x, 0), reverse=True)
     
     logger.info(f"   Selected {len(selected)} features with IV >= {threshold}")
     
@@ -275,11 +242,7 @@ def _select_mutual_info(
     """Select features by mutual information."""
     from sklearn.feature_selection import mutual_info_classif, SelectKBest
     
-    # Get numeric columns
-    numeric_cols = [
-        c for c in X.columns
-        if X[c].dtype in [pl.Float32, pl.Float64, pl.Int32, pl.Int64, pl.Int16, pl.Int8]
-    ]
+    numeric_cols = _get_numeric_columns(X)
     
     if not numeric_cols:
         return []
@@ -294,10 +257,6 @@ def _select_mutual_info(
     
     return selected
 
-
-# =============================================================================
-# Class-based API
-# =============================================================================
 
 class FeatureSelector(MarsTransformer):
     """
@@ -349,7 +308,6 @@ class FeatureSelector(MarsTransformer):
         self.variance_threshold = variance_threshold
         self.iv_threshold = iv_threshold
         
-        # Fitted attributes
         self.selected_features_: List[str] = []
         self.feature_scores_: Dict[str, float] = {}
     
@@ -372,7 +330,6 @@ class FeatureSelector(MarsTransformer):
     
     def _transform_impl(self, X: pl.DataFrame, **kwargs) -> pl.DataFrame:
         """Apply feature selection."""
-        # Only select features that exist in X
         available = [f for f in self.selected_features_ if f in X.columns]
         
         if len(available) < len(self.selected_features_):

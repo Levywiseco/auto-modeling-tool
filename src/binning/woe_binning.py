@@ -461,7 +461,7 @@ class WoeBinner(MarsTransformer):
                 })
                 .group_by("bin")
                 .agg([
-                    pl.count().alias("count"),
+                    pl.len().alias("count"),
                     pl.col("target").sum().alias("bad"),
                 ])
                 .with_columns([
@@ -669,7 +669,7 @@ class WoeBinner(MarsTransformer):
                 })
                 .group_by("bin_idx")
                 .agg([
-                    pl.count().alias("count"),
+                    pl.len().alias("count"),
                     pl.col("target").sum().alias("bad"),
                 ])
                 .with_columns([

@@ -11,6 +11,8 @@ from .metrics import (
     calculate_ks,
     calculate_gini,
     calculate_lift,
+    calculate_psi,
+    calculate_feature_psi,
     calculate_all_metrics,
     format_metrics_table,
 )
@@ -25,6 +27,8 @@ __all__ = [
     "calculate_ks",
     "calculate_gini",
     "calculate_lift",
+    "calculate_psi",
+    "calculate_feature_psi",
     "calculate_all_metrics",
     "format_metrics_table",
 ]
