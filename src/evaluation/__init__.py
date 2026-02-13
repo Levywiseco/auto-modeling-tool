@@ -17,7 +17,15 @@ from .metrics import (
     format_metrics_table,
 )
 
+from .cross_validation import (
+    CrossValidator,
+    cross_validate_model,
+    stratified_kfold_cv,
+    timeseries_cv,
+)
+
 __all__ = [
+    # Metrics
     "accuracy",
     "precision",
     "recall",
@@ -31,4 +39,9 @@ __all__ = [
     "calculate_feature_psi",
     "calculate_all_metrics",
     "format_metrics_table",
+    # Cross-validation
+    "CrossValidator",
+    "cross_validate_model",
+    "stratified_kfold_cv",
+    "timeseries_cv",
 ]

@@ -8,7 +8,10 @@ to Pandas, especially for large datasets.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 import polars as pl
 
@@ -224,42 +227,53 @@ def load_parquet(
 @time_it
 def load_sql(
     query: str,
-    connection: str,
+    connection: Any,
     *,
     protocol: str = "connectorx",
 ) -> pl.DataFrame:
     """
     Load data from SQL database using Polars.
-    
+
     Uses connectorx for high-performance database access.
-    
+
     Parameters
     ----------
     query : str
         SQL query to execute.
-    connection : str
-        Database connection string.
-        Examples:
-        - PostgreSQL: "postgresql://user:pass@host:port/db"
-        - MySQL: "mysql://user:pass@host:port/db"
-        - SQLite: "sqlite:///path/to/db.sqlite"
+    connection : Any
+        Database connection. Can be:
+        - Connection URI string: "postgresql://user:pass@host:port/db"
+        - Existing database connection object
     protocol : str, default "connectorx"
         Protocol to use for database access.
-        
+
     Returns
     -------
     pl.DataFrame
         Query results.
-        
+
     Example
     -------
+    >>> # Using connection URI
     >>> df = load_sql("SELECT * FROM users WHERE age > 18", "postgresql://...")
+    >>>
+    >>> # Using connection object
+    >>> import connectorx as cx
+    >>> conn = cx.read_sql("postgresql://...", "query")
+    >>> df = load_sql("SELECT * FROM users", conn)
     """
     logger.info(f"🗄️ Executing SQL query...")
-    
-    df = pl.read_database_uri(query, connection)
+
+    # Handle both URI string and connection object
+    if isinstance(connection, str):
+        # connection is a URI string
+        df = pl.read_database(query, connection)
+    else:
+        # connection is an existing connection object
+        df = pl.read_database(query, connection)
+
     logger.info(f"✅ Loaded {len(df)} rows × {len(df.columns)} columns")
-    
+
     return df
 
 

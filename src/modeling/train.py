@@ -24,6 +24,7 @@ SUPPORTED_MODELS = {
     "xgboost": "XGBClassifier",
     "random_forest": "RandomForestClassifier",
     "lightgbm": "LGBMClassifier",
+    "catboost": "CatBoostClassifier",
 }
 
 
@@ -132,7 +133,15 @@ class ModelTrainer(MarsBaseEstimator):
                 verbose=-1,
                 **params
             )
-        
+
+        elif self.model_type == "catboost":
+            from catboost import CatBoostClassifier
+            return CatBoostClassifier(
+                random_state=self.random_state,
+                verbose=0,
+                **params
+            )
+
         else:
             raise ValueError(
                 f"Unknown model type: {self.model_type}. "
