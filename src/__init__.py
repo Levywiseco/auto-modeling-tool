@@ -13,20 +13,41 @@ Features
 - Model evaluation with comprehensive metrics
 - Export and report generation
 
-Example
--------
+Task-oriented entry points (start here)
+---------------------------------------
+>>> from src import profile_data, profile_risk, Monitor
+>>>
+>>> report = profile_data(df, target="target", group_col="month")
+>>> profile = profile_risk(df, target="target", group_col="month")
+>>> monitor = Monitor(binner_params={"n_bins": 10})
+>>> mreport = monitor.monitor(df, features=profile.features,
+...                           target="target", group_col="month",
+...                           binner=profile.binner)
+
+Low-level tools (sklearn-style)
+-------------------------------
 >>> from src.data import load_data, DataPreprocessor
 >>> from src.binning import WoeBinner
 >>> from src.features import FeatureSelector
 >>> from src.evaluation import calculate_all_metrics
->>> 
->>> df = load_data("data.csv")
->>> preprocessor = DataPreprocessor()
->>> df_clean = preprocessor.fit_transform(df)
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 __author__ = "AutoModelTool Team"
+
+# Task-oriented workflow entry points
+from .analysis import profile_data, profile_risk
+
+# Monitoring
+from .monitoring import AlertConfig, Monitor, generate_monitoring_alert
+
+# Report objects
+from .reports import (
+    BinningReport,
+    DataProfileReport,
+    MonitoringReport,
+    RiskProfile,
+)
 
 # Core components
 from .core import (
@@ -79,6 +100,18 @@ from .utils import (
 __all__ = [
     # Version
     "__version__",
+    # Workflows
+    "profile_data",
+    "profile_risk",
+    # Monitoring
+    "Monitor",
+    "AlertConfig",
+    "generate_monitoring_alert",
+    # Report objects
+    "DataProfileReport",
+    "BinningReport",
+    "RiskProfile",
+    "MonitoringReport",
     # Core
     "MarsBaseEstimator",
     "MarsTransformer",
