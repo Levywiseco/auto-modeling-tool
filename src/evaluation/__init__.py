@@ -24,6 +24,12 @@ from .cross_validation import (
     timeseries_cv,
 )
 
+from .stability import (
+    bin_distribution,
+    psi_from_distributions,
+    psi_level,
+)
+
 __all__ = [
     # Metrics
     "accuracy",
@@ -44,4 +50,8 @@ __all__ = [
     "cross_validate_model",
     "stratified_kfold_cv",
     "timeseries_cv",
+    # Stability
+    "bin_distribution",
+    "psi_from_distributions",
+    "psi_level",
 ]

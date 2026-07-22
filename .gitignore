@@ -148,3 +148,6 @@ results/
 *.xlsx
 *.parquet
 !tests/fixtures/*.csv
+
+# MkDocs build output
+site/
