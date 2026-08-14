@@ -58,8 +58,9 @@ def validate_release(
         checks.append(ReleaseCheck("artifact_loadable", False, str(exc)))
         return ReleaseValidationResult(False, checks)
 
+    task = artifact.get("task", "classification")
     required = ["artifact_version", "task", "feature_columns", "model", "preprocessor"]
-    if artifact.get("task", "classification") == "classification":
+    if task == "classification":
         required.extend(["binner", "selector", "woe_feature_columns", "selected_features"])
     missing = [key for key in required if key not in artifact]
     checks.append(
@@ -71,7 +72,7 @@ def validate_release(
     )
 
     features = artifact.get("feature_columns", [])
-    selected = artifact.get("selected_features", [])
+    selected = artifact.get("selected_features", features if task == "regression" else [])
     checks.append(
         ReleaseCheck(
             "feature_contract",
