@@ -133,7 +133,7 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
     )
     if algorithm not in allowed:
         raise ValueError(
-            f"Unsupported {target_mode} algorithm: {algorithm!r}. "
+            f"Unsupported algorithm for {target_mode}: {algorithm!r}. "
             f"Allowed values: {sorted(allowed)}"
         )
     if target_mode not in {"classification", "regression"}:
