@@ -207,6 +207,11 @@ class AutoPipeline:
         y_oot = oot.get_column(self.target_col)
         self._X_oot_raw = X_oot_raw
         self._y_oot = y_oot
+        self.sample_col = sample_col
+        self.date_column = date_column
+        self.oot_start = oot_start
+        self.dev_label = dev_label
+        self.oot_label = oot_label
         self._X_test = X_oot_raw
         self._y_test = y_oot
         y_train = y_dev
@@ -226,7 +231,8 @@ class AutoPipeline:
         self.binner_ = WoeBinner(
             n_bins=self.n_bins,
             method=self.binning_method,
-            min_samples_bin=50,
+            min_samples_bin=kwargs.get("min_samples_bin", 50),
+            monotonic=kwargs.get("monotonic", False),
         )
         X_train_woe = self.binner_.fit_transform(X_train, y_train, return_type="woe")
         
