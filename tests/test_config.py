@@ -118,7 +118,7 @@ def test_configured_pipeline_runs_with_scoring_defaults(tmp_path: Path):
     frame = pl.DataFrame(
         {
             "x": list(range(40)),
-            "target": ([0, 1] * 12) + ([0, 1] * 8),
+            "target": [int((index % 20) >= 10) for index in range(40)],
             "sample": (["dev"] * 24) + (["oot"] * 16),
         }
     )
