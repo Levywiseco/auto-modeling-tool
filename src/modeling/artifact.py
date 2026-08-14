@@ -42,21 +42,38 @@ def build_scoring_artifact(
     }
 
 
+def build_regression_artifact(
+    *,
+    target_col: str,
+    feature_columns: list[str],
+    preprocessor: Any,
+    model: Any,
+    target_transform: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Bundle a regression preprocessor, model and target transform."""
+    return {
+        "artifact_version": ARTIFACT_VERSION,
+        "task": "regression",
+        "target_col": target_col,
+        "feature_columns": list(feature_columns),
+        "preprocessor": preprocessor,
+        "model": model,
+        "target_transform": target_transform,
+        "metadata": metadata or {},
+    }
+
+
 def score_with_artifact(
     artifact: Dict[str, Any],
     X: Union[pl.DataFrame, np.ndarray],
     *,
     return_proba: bool = False,
 ) -> np.ndarray:
-    """Score raw driver data using a saved artifact."""
-    required = [
-        "preprocessor",
-        "binner",
-        "selector",
-        "model",
-        "feature_columns",
-        "woe_feature_columns",
-    ]
+    """Score raw driver data using a saved classification or regression artifact."""
+    required = ["preprocessor", "model", "feature_columns"]
+    if artifact.get("task", "classification") == "classification":
+        required.extend(["binner", "selector", "woe_feature_columns"])
     missing_keys = [key for key in required if key not in artifact]
     if missing_keys:
         raise ValidationError(
@@ -78,11 +95,18 @@ def score_with_artifact(
 
     raw = X.select(artifact["feature_columns"])
     transformed = artifact["preprocessor"].transform(raw)
+    if artifact.get("task", "classification") == "regression":
+        if return_proba:
+            raise ValidationError("Regression artifacts do not expose probabilities")
+        predictions = artifact["model"].predict(transformed.to_numpy())
+        if artifact.get("target_transform") == "log1p":
+            predictions = np.expm1(predictions)
+        return np.asarray(predictions)
+
     woe = artifact["binner"].transform(transformed, return_type="woe")
     woe = woe.select(artifact["woe_feature_columns"])
     selected = artifact["selector"].transform(woe)
     values = selected.to_numpy()
-
     model = artifact["model"]
     if return_proba:
         if not hasattr(model, "predict_proba"):
