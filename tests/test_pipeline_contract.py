@@ -109,7 +109,7 @@ def test_weighted_xgboost_pipeline_and_release_gate(tmp_path):
     n_rows = 120
     x1 = rng.normal(size=n_rows)
     x2 = rng.normal(size=n_rows)
-    target = ((x1 + 0.35 * x2) > 0).cast if False else (x1 + 0.35 * x2 > 0).astype(int)
+    target = (x1 + 0.35 * x2 > 0).astype(int)
     frame = pl.DataFrame({
         "x1": x1,
         "x2": x2,
