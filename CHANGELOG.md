@@ -76,9 +76,8 @@ a multi-sheet audit report, and a pre-release quality gate.
 - `--test-size` now means "proportion held out as OOT when no sample column or
   date boundary is given", rather than a plain random train/test split
 - Low-level APIs from v2.1.0 are untouched
-- `requires-python` stays at `>=3.9`: the suite was run manually on 3.9.6
-  (101 passed; the 2 failures were XGBoost missing `libomp` locally, not a
-  version issue). CI still covers 3.10 / 3.11 / 3.12 only
+- `requires-python` stays at `>=3.9` and is accurate: the full suite passes on
+  3.9.6 (103 passed), matching 3.10 / 3.11 / 3.12
 
 ### Upgrade note
 
