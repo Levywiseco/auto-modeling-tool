@@ -8,7 +8,10 @@ from sklearn.linear_model import LogisticRegression
 from src.binning.woe_binning import WoeBinner
 from src.data.preprocess import DataPreprocessor
 from src.data.split import split_dev_oot
-from src.modeling.scorecard import ScorecardBuilder
+from src.modeling.scorecard import (
+    ScorecardBuilder,
+    probability_to_credit_score,
+)
 
 
 def test_explicit_sample_dev_oot_split():
@@ -150,3 +153,16 @@ def test_weighted_xgboost_pipeline_and_release_gate(tmp_path):
         min_auc=0.5,
     )
     assert result.passed
+
+
+def test_probability_to_credit_score_contract():
+    scores = probability_to_credit_score(
+        np.array([0.5, 0.1, 0.99]),
+        base_score=500,
+        pdo=50,
+        min_score=300,
+        max_score=900,
+    )
+    np.testing.assert_allclose(scores[0], 500.0, atol=1e-8)
+    assert scores[1] > scores[0] > scores[2]
+    assert np.all((scores >= 300) & (scores <= 900))
