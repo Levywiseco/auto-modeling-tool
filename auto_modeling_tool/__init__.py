@@ -14,7 +14,7 @@ Features
 
 Task-oriented entry points (start here)
 ---------------------------------------
->>> from src import profile_data, profile_risk, Monitor
+>>> from auto_modeling_tool import profile_data, profile_risk, Monitor
 >>>
 >>> report = profile_data(df, target="target", group_col="month")
 >>> profile = profile_risk(df, target="target", group_col="month")
@@ -25,13 +25,13 @@ Task-oriented entry points (start here)
 
 Low-level tools (sklearn-style)
 -------------------------------
->>> from src.data import load_data, DataPreprocessor
->>> from src.binning import WoeBinner
->>> from src.features import FeatureSelector
->>> from src.evaluation import calculate_all_metrics
+>>> from auto_modeling_tool.data import load_data, DataPreprocessor
+>>> from auto_modeling_tool.binning import WoeBinner
+>>> from auto_modeling_tool.features import FeatureSelector
+>>> from auto_modeling_tool.evaluation import calculate_all_metrics
 """
 
-__version__ = "2.2.0"
+__version__ = "3.0.0"
 __author__ = "AutoModelTool Team"
 
 # Task-oriented workflow entry points

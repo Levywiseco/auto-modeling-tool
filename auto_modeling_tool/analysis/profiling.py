@@ -41,7 +41,7 @@ def profile_data(
     """Profile a dataset's quality and distributions before modeling.
 
     Accepts a Pandas or Polars DataFrame and returns a structured
-    :class:`~src.reports.DataProfileReport` (no files are written).
+    :class:`~auto_modeling_tool.reports.DataProfileReport` (no files are written).
 
     Parameters
     ----------

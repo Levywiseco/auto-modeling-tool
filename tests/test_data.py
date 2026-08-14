@@ -7,8 +7,8 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.data.preprocess import DataPreprocessor, clean_data
-from src.data.split import stratified_train_test_split, train_test_split
+from auto_modeling_tool.data.preprocess import DataPreprocessor, clean_data
+from auto_modeling_tool.data.split import stratified_train_test_split, train_test_split
 
 
 class TestDataPreprocessor:

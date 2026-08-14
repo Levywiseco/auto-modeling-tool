@@ -12,11 +12,11 @@ import polars as pl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.binning.woe_binning import WoeBinner
-from src.data.loaders import load_data
-from src.data.split import split_dev_oot
-from src.evaluation.stability import psi_from_distributions
-from src.reports.excel import write_model_report
+from auto_modeling_tool.binning.woe_binning import WoeBinner
+from auto_modeling_tool.data.loaders import load_data
+from auto_modeling_tool.data.split import split_dev_oot
+from auto_modeling_tool.evaluation.stability import psi_from_distributions
+from auto_modeling_tool.reports.excel import write_model_report
 
 NUMERIC_DTYPES = {
     pl.Int8, pl.Int16, pl.Int32, pl.Int64,

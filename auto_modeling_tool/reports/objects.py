@@ -85,7 +85,7 @@ class _MarkdownReportMixin:
 
 @dataclass
 class DataProfileReport(_MarkdownReportMixin):
-    """Data-quality snapshot produced by :func:`src.analysis.profile_data`.
+    """Data-quality snapshot produced by :func:`auto_modeling_tool.analysis.profile_data`.
 
     Attributes
     ----------
@@ -159,7 +159,7 @@ class BinningReport(_MarkdownReportMixin):
 
 @dataclass
 class RiskProfile:
-    """Unified result of :func:`src.analysis.profile_risk`.
+    """Unified result of :func:`auto_modeling_tool.analysis.profile_risk`.
 
     Holds the evaluation report together with the fitted binner so binning
     rules can be reused on new data (scoring, monitoring, benchmark periods).
@@ -198,7 +198,7 @@ class RiskProfile:
 
 @dataclass
 class MonitoringReport(_MarkdownReportMixin):
-    """Feature / model monitoring results from :class:`src.monitoring.Monitor`.
+    """Feature / model monitoring results from :class:`auto_modeling_tool.monitoring.Monitor`.
 
     Attributes
     ----------

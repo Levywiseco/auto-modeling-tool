@@ -65,7 +65,7 @@ def profile_risk(
 
     The one-call workflow entry point: accepts a Pandas or Polars business
     table, fits (or reuses) binning rules, and returns a
-    :class:`~src.reports.RiskProfile` holding structured tables plus the
+    :class:`~auto_modeling_tool.reports.RiskProfile` holding structured tables plus the
     fitted binner for reuse on new data.
 
     Parameters

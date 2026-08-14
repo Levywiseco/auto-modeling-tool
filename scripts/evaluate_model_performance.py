@@ -11,12 +11,12 @@ import polars as pl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.data.loaders import load_data
-from src.evaluation.metrics import (
+from auto_modeling_tool.data.loaders import load_data
+from auto_modeling_tool.evaluation.metrics import (
     calculate_all_metrics,
     calculate_regression_metrics,
 )
-from src.reports.excel import write_model_report
+from auto_modeling_tool.reports.excel import write_model_report
 
 
 def _evaluate_frame(

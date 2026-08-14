@@ -63,7 +63,7 @@ python scripts/score_new_samples.py \
 
 ```python
 import polars as pl
-from src.modeling.artifact import load_scoring_artifact, score_with_artifact
+from auto_modeling_tool.modeling.artifact import load_scoring_artifact, score_with_artifact
 
 artifact = load_scoring_artifact("output/scoring_artifact.pkl")
 df = pl.read_csv("new_applications.csv")
@@ -82,7 +82,7 @@ label = score_with_artifact(artifact, df)                      # 0/1
 如果你的流程不走 `auto_pipeline`，也可以手工组装：
 
 ```python
-from src.modeling.artifact import build_scoring_artifact, save_scoring_artifact
+from auto_modeling_tool.modeling.artifact import build_scoring_artifact, save_scoring_artifact
 
 artifact = build_scoring_artifact(
     target_col="target",

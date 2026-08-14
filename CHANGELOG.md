@@ -1,5 +1,74 @@
 # Changelog
 
+## [3.0.0] - 2026-08-14
+
+Packaging and code-quality pass. The only breaking change is the import name.
+
+### Breaking
+
+- **The package is now `auto_modeling_tool`, not `src`.** Installing 2.x put
+  five generic top-level names into site-packages — `src`, `tests`, `scripts`,
+  `examples` and `build` — so `import src` resolved to this project and any
+  other package doing the same would collide. `packages.find` is now scoped to
+  `auto_modeling_tool*`; a fresh install contributes exactly one top-level name.
+
+  Migration is a find-and-replace:
+
+  ```python
+  from src import profile_risk          # 2.x
+  from auto_modeling_tool import profile_risk   # 3.0
+  ```
+
+  ```bash
+  python -m src.main --config ...                  # 2.x
+  python -m auto_modeling_tool.main --config ...   # 3.0
+  ```
+
+  The `automodel` console script is unaffected. No API, argument or output
+  changed — only the import path. Module references in older changelog entries
+  below are written with the new name for readability; they lived under `src.`
+  at the time.
+
+### Fixed
+
+- `ProbabilityCalibrator` could never run. Two independent defects:
+  its internal dummy classifier listed `BaseEstimator` before `ClassifierMixin`,
+  so sklearn's MRO-based tag resolution reported a regressor and
+  `CalibratedClassifierCV` refused to fit; and the dummy's `predict_proba`
+  closed over the full probability vector while ignoring its `X` argument, so
+  every cross-validation fold received a length mismatch. Reimplemented with the
+  standard formulation — `LogisticRegression` on the raw score for Platt
+  scaling, `IsotonicRegression` for isotonic. On a 600-row over-confident score,
+  Brier improves 0.2294 → 0.1781 (sigmoid) / 0.1669 (isotonic).
+- `ProbabilityCalibrator` now accepts `pl.Series` for `y_prob` (previously only
+  `pl.DataFrame`, awkward in a Polars-first codebase) and raises a clear error
+  on length mismatch instead of failing deep inside sklearn.
+- Removed a dead `bin_expr` assignment in `woe_binning`.
+
+### Added
+
+- `LICENSE` — the MIT text that README and `pyproject` both pointed at but which
+  was never committed.
+- `tests/test_standalone_tools.py` — direct coverage for `calibration`,
+  `cross_validation` and `tuning`, the three modules that are exported as public
+  API but are not called by any pipeline. The calibrator shipped broken
+  precisely because nothing tested it.
+
+### Changed
+
+- `ruff check` is clean (was 1511 errors). Roughly 1140 whitespace/import/
+  f-string fixes, 364 typing modernizations (`List[str]` → `list[str]`; PEP 585
+  generics are available on the declared 3.9 floor), and 81 unused imports.
+  No behaviour change; verified with 114 passing tests on 3.9.6.
+
+### Known gaps
+
+- `calibration`, `tuning` and `cross_validation` remain reachable only by direct
+  import — `auto_pipeline` does not call them, and `ModelTrainer` carries its own
+  private tuning implementation separate from `modeling.tuning`.
+- No reject inference, no model-level monotonic constraints, no
+  champion/challenger comparison.
+
 ## [2.2.0] - 2026-08-14
 
 Production-hardening iteration aligned with `USER_GUIDE 0.75`: leakage-safe

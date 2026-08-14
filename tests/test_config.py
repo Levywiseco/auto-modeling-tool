@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.config import config_to_pipeline_kwargs, load_pipeline_config
+from auto_modeling_tool.config import config_to_pipeline_kwargs, load_pipeline_config
 
 
 def test_canonical_config_resolves_relative_paths(tmp_path: Path):
@@ -111,7 +111,7 @@ modeling:
 def test_configured_pipeline_runs_with_scoring_defaults(tmp_path: Path):
     import polars as pl
 
-    from src.main import run_configured_pipeline
+    from auto_modeling_tool.main import run_configured_pipeline
 
     data_path = tmp_path / "data.csv"
     frame = pl.DataFrame(

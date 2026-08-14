@@ -6,7 +6,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.evaluation.metrics import (
+from auto_modeling_tool.evaluation.metrics import (
     accuracy,
     calculate_all_metrics,
     calculate_gini,
@@ -158,7 +158,7 @@ class TestPSI:
 
 
 def test_metrics_handle_one_class_evaluation_slice():
-    from src.evaluation.metrics import calculate_all_metrics
+    from auto_modeling_tool.evaluation.metrics import calculate_all_metrics
 
     metrics = calculate_all_metrics(
         [1, 1, 1],
@@ -171,7 +171,7 @@ def test_metrics_handle_one_class_evaluation_slice():
 
 
 def test_calculate_lift_handles_duplicate_scores():
-    from src.evaluation.metrics import calculate_lift
+    from auto_modeling_tool.evaluation.metrics import calculate_lift
 
     table = calculate_lift(
         [0, 1, 0, 1],

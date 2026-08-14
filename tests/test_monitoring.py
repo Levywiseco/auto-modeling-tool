@@ -6,9 +6,9 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.analysis import profile_risk
-from src.monitoring import AlertConfig, Monitor, generate_monitoring_alert
-from src.reports import MonitoringReport
+from auto_modeling_tool.analysis import profile_risk
+from auto_modeling_tool.monitoring import AlertConfig, Monitor, generate_monitoring_alert
+from auto_modeling_tool.reports import MonitoringReport
 
 
 @pytest.fixture
@@ -102,7 +102,7 @@ class TestMonitor:
         assert report.metadata["score_mean_relative_delta"] is not None
 
     def test_requires_group_or_benchmark(self, drift_data):
-        from src.core.exceptions import ValidationError
+        from auto_modeling_tool.core.exceptions import ValidationError
         with pytest.raises(ValidationError):
             Monitor().monitor(drift_data, features=["score"])
 

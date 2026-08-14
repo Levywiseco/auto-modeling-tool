@@ -6,7 +6,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.features.selection import (
+from auto_modeling_tool.features.selection import (
     FeatureSelector,
     remove_multicollinearity,
     select_features,

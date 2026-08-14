@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 import polars as pl
 
-from src.evaluation.metrics import calculate_regression_metrics
-from src.modeling.artifact import load_scoring_artifact, score_with_artifact
-from src.modeling.train import ModelTrainer
-from src.pipelines.regression_pipeline import RegressionPipeline
+from auto_modeling_tool.evaluation.metrics import calculate_regression_metrics
+from auto_modeling_tool.modeling.artifact import load_scoring_artifact, score_with_artifact
+from auto_modeling_tool.modeling.train import ModelTrainer
+from auto_modeling_tool.pipelines.regression_pipeline import RegressionPipeline
 
 
 def test_regression_metrics():
@@ -68,7 +68,7 @@ def test_regression_release_gate_discovers_report(tmp_path: Path):
     pipeline.evaluate()
     pipeline.save(tmp_path)
 
-    from src.evaluation.quality_gate import validate_release
+    from auto_modeling_tool.evaluation.quality_gate import validate_release
 
     result = validate_release(tmp_path)
     assert result.passed

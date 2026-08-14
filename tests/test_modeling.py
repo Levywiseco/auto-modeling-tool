@@ -9,7 +9,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.modeling.train import ModelTrainer, load_model, save_model, train_model
+from auto_modeling_tool.modeling.train import ModelTrainer, load_model, save_model, train_model
 
 
 class TestModelTrainer:

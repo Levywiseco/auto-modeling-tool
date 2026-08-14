@@ -1,12 +1,12 @@
-from src.binning.woe_binning import perform_woe_binning
-from src.data.loaders import load_data
-from src.data.preprocess import preprocess_data
-from src.data.split import split_data
-from src.evaluation.metrics import calculate_metrics
-from src.evaluation.report import generate_report
-from src.features.generation import generate_features
-from src.features.selection import select_features
-from src.modeling.train import train_model
+from auto_modeling_tool.binning.woe_binning import perform_woe_binning
+from auto_modeling_tool.data.loaders import load_data
+from auto_modeling_tool.data.preprocess import preprocess_data
+from auto_modeling_tool.data.split import split_data
+from auto_modeling_tool.evaluation.metrics import calculate_metrics
+from auto_modeling_tool.evaluation.report import generate_report
+from auto_modeling_tool.features.generation import generate_features
+from auto_modeling_tool.features.selection import select_features
+from auto_modeling_tool.modeling.train import train_model
 
 
 def data_pipeline(file_path):

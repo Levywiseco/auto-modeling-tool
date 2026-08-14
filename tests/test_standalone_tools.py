@@ -11,9 +11,9 @@ import pytest
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss
 
-from src.evaluation import cross_validate_model
-from src.modeling import ProbabilityCalibrator, calibrate_probabilities
-from src.modeling.tuning import get_default_param_grid, tune_hyperparameters
+from auto_modeling_tool.evaluation import cross_validate_model
+from auto_modeling_tool.modeling import ProbabilityCalibrator, calibrate_probabilities
+from auto_modeling_tool.modeling.tuning import get_default_param_grid, tune_hyperparameters
 
 
 @pytest.fixture

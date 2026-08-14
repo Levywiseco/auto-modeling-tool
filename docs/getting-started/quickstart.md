@@ -29,7 +29,7 @@ df = pl.DataFrame({
 ## 1. 数据画像
 
 ```python
-from src import profile_data
+from auto_modeling_tool import profile_data
 
 dq = profile_data(df, target="target", group_col="month",
                   special_values=[-999])
@@ -42,7 +42,7 @@ dq.trend_tables["missing_rate"]    # 缺失率按月趋势
 ## 2. 特征风险评估
 
 ```python
-from src import profile_risk
+from auto_modeling_tool import profile_risk
 
 profile = profile_risk(
     df,
@@ -69,7 +69,7 @@ profile.report.trend_tables["psi"] # 特征 × 月份 PSI 矩阵
 ## 3. 上线监控
 
 ```python
-from src import Monitor
+from auto_modeling_tool import Monitor
 
 report = Monitor().monitor(
     df_prod,                       # 生产期数据
@@ -85,7 +85,7 @@ report.summary_table               # psi_max / missing_delta / status
 ## 4. 中文告警
 
 ```python
-from src import generate_monitoring_alert
+from auto_modeling_tool import generate_monitoring_alert
 
 print(generate_monitoring_alert(report, model_features=profile.features))
 ```

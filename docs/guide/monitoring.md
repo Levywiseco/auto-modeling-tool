@@ -8,7 +8,7 @@
 === "按期对比（group_col）"
 
     ```python
-    from src import Monitor
+    from auto_modeling_tool import Monitor
 
     report = Monitor(binner_params={"n_bins": 10}).monitor(
         df,
@@ -52,7 +52,7 @@
 ## 中文告警
 
 ```python
-from src import generate_monitoring_alert, AlertConfig
+from auto_modeling_tool import generate_monitoring_alert, AlertConfig
 
 text = generate_monitoring_alert(
     report,

@@ -7,21 +7,21 @@
 
 ### 新增
 
-- **配置驱动主流程** — `python -m src.main --config configs/pipeline_config.yaml`
-    - `src.config`：YAML schema、相对路径按配置文件解析、旧键别名兼容
+- **配置驱动主流程** — `python -m auto_modeling_tool.main --config configs/pipeline_config.yaml`
+    - `auto_modeling_tool.config`：YAML schema、相对路径按配置文件解析、旧键别名兼容
     - 29 个新 CLI 参数，每项配置都能临时覆盖
     - 见[配置驱动主流程](../guide/config-pipeline.md)
-- **打分 Artifact** — `src.modeling.artifact`
+- **打分 Artifact** — `auto_modeling_tool.modeling.artifact`
     - `scoring_artifact.pkl` 打包预处理器、分箱、筛选器与模型
     - `score_with_artifact` 拿原始字段直接打分，带列契约校验
     - 见[独立打分与 Artifact](../guide/scoring-artifact.md)
-- **回归任务** — `src.pipelines.regression_pipeline`
+- **回归任务** — `auto_modeling_tool.pipelines.regression_pipeline`
     - RMSE / MAE / R²，可选 `log1p` 目标变换（打分自动逆变换）
     - 见[回归任务](../guide/regression.md)
-- **发布门禁** — `src.evaluation.quality_gate`
+- **发布门禁** — `auto_modeling_tool.evaluation.quality_gate`
     - Artifact 契约 → 字段契约 → 报告 sheet 契约 → 可选 AUC/PSI 阈值
     - 见[发布门禁](../guide/release-gate.md)
-- **Excel 审计报告** — `src.reports.excel`，分箱 / WOE / IV / 变量审计 /
+- **Excel 审计报告** — `auto_modeling_tool.reports.excel`，分箱 / WOE / IV / 变量审计 /
   筛选 / Dev-OOT 指标 / 分数分箱 / Score PSI / 稳定性 / 分群 / 跨期 / 基准
 - **信用分转换** — 可配 `base_score` / `pdo` / 上下限
 - **独立脚本** — `score_new_samples` / `evaluate_model_performance` /
@@ -68,25 +68,25 @@
 
 ### 新增
 
-- **`src.analysis`** — 任务式入口
+- **`auto_modeling_tool.analysis`** — 任务式入口
     - `profile_data(df, ...)`：数据质量画像（overview / dq / stats 三表 + 按期趋势）
     - `profile_risk(df, target=...)`：一次调用完成分箱 + IV/KS + 跨期 PSI，
       返回 `RiskProfile`（report + 可复用 binner）
-- **`src.monitoring`** — 监控与告警
+- **`auto_modeling_tool.monitoring`** — 监控与告警
     - `Monitor`：PSI / 缺失率 / 坏率 / 分均值漂移监控，支持
       `group_col` 按期对比与 `benchmark_df` 对照开发样本两种基准模式
     - `generate_monitoring_alert` + `AlertConfig`：按优先级排序的中文告警文本
-- **`src.reports`** — 结构化 Report 对象
+- **`auto_modeling_tool.reports`** — 结构化 Report 对象
     - `DataProfileReport` / `BinningReport` / `RiskProfile` / `MonitoringReport`
     - 统一 `summary_table` / `detail_table` / `trend_tables` / `metadata` 结构
     - `to_markdown()` / `save()` 导出
-- **`src.evaluation.stability`** — 分箱分布 PSI 计算原语
+- **`auto_modeling_tool.evaluation.stability`** — 分箱分布 PSI 计算原语
   （`bin_distribution` / `psi_from_distributions` / `psi_level`）
 - **文档站** — MkDocs Material，含 Quickstart、API 约定、使用指南与 Reference
 
 ### 变更
 
-- 顶层包直接导出工作流 API：`from src import profile_risk, Monitor, ...`
+- 顶层包直接导出工作流 API：`from auto_modeling_tool import profile_risk, Monitor, ...`
 - README 重写为"从任务开始"结构，新增稳定性分级说明
 
 ### 兼容性

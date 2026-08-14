@@ -6,7 +6,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.binning.woe_binning import WoeBinner
+from auto_modeling_tool.binning.woe_binning import WoeBinner
 
 
 class TestWoeBinner:

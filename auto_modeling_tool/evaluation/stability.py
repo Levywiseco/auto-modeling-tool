@@ -1,10 +1,10 @@
 """Stability metrics on binned distributions.
 
-Shared by ``src.analysis.profile_risk`` and ``src.monitoring.Monitor``:
+Shared by ``auto_modeling_tool.analysis.profile_risk`` and ``auto_modeling_tool.monitoring.Monitor``:
 both bucket features with a fitted binner, then compare bin-index
 distributions between a benchmark slice and later slices.
 
-Bin index protocol (from :class:`~src.binning.WoeBinner`):
+Bin index protocol (from :class:`~auto_modeling_tool.binning.WoeBinner`):
 missing = -1, other = -2, special values start at -3 descending.
 """
 

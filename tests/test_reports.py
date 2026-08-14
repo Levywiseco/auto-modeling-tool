@@ -4,7 +4,7 @@ from pathlib import Path
 
 import polars as pl
 
-from src.reports.excel import write_model_report
+from auto_modeling_tool.reports.excel import write_model_report
 
 
 def test_model_report_contains_stable_core_sheets(tmp_path: Path):

@@ -3,7 +3,7 @@
 2.2.0 起，常规建模不需要写 Python：改一份 YAML，跑一条命令。
 
 ```bash
-python -m src.main --config configs/pipeline_config.yaml
+python -m auto_modeling_tool.main --config configs/pipeline_config.yaml
 ```
 
 配置里的相对路径按**配置文件所在目录**解析，不是按当前工作目录 ——
@@ -88,7 +88,7 @@ scoring:
 每个配置项都能用命令行临时盖掉，适合做对比实验而不改文件：
 
 ```bash
-python -m src.main --config configs/pipeline_config.yaml \
+python -m auto_modeling_tool.main --config configs/pipeline_config.yaml \
   --model xgboost --early-stopping-eval oot --n-features 30
 ```
 
@@ -112,7 +112,7 @@ python -m src.main --config configs/pipeline_config.yaml \
 老的纯 CLI 用法完全保留：
 
 ```bash
-python -m src.main --input data.csv --target target --output output
+python -m auto_modeling_tool.main --input data.csv --target target --output output
 ```
 
 ## 输出物

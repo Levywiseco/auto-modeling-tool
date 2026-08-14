@@ -43,7 +43,7 @@ python scripts/validate_release.py \
 ## Python 里用
 
 ```python
-from src.evaluation.quality_gate import validate_release
+from auto_modeling_tool.evaluation.quality_gate import validate_release
 
 result = validate_release(
     "output",
@@ -65,7 +65,7 @@ result.as_dict()                   # 可直接 json.dumps
 ```yaml
 - name: Release gate
   run: |
-    python -m src.main --config configs/pipeline_config.yaml
+    python -m auto_modeling_tool.main --config configs/pipeline_config.yaml
     python scripts/validate_release.py --model-dir output \
       --min-auc 0.70 --max-psi 0.10 --json output/release_check.json
 ```
