@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.1.1] - 2026-08-15
+
+### Fixed
+
+- **Run history silently lost runs.** `new_run_id` hashed only the second-resolution
+  timestamp, the model name, and a seed that `archive_run` filled with the output
+  directory — constant across a parameter sweep. Every run starting in the same
+  second therefore produced an identical id, and `archive_run` wrote into the
+  existing directory with `mkdir(exist_ok=True)` plus overwriting copies. No error,
+  no warning. Measured: six runs launched, one archived.
+
+  This was the feature's own flagship workflow — sweeping a parameter and comparing
+  the archived runs — and it was the workflow that destroyed the data.
+
+  The id suffix is now per-call entropy, and `archive_run` refuses to reuse an
+  existing directory, suffixing instead. The id and `created_at` also derive from a
+  single clock reading, so they can no longer disagree across a second boundary.
+
+  `test_same_second_runs_do_not_collide` passed throughout because it hand-fed two
+  different seeds, which the production caller never does. It now asserts that 50
+  ids generated from identical inputs are all distinct, and a new test archives five
+  runs at one fixed timestamp and requires all five back.
+
 ## [3.1.0] - 2026-08-15
 
 ### Added
@@ -14,6 +37,7 @@
   - `python -m auto_modeling_tool.runs show <id>` — one run in full
   - Run ids are `<timestamp>-<algorithm>-<hash>`: sortable, readable, and safe
     for two runs landing in the same second. Any unique prefix resolves.
+    (The same-second guarantee did not actually hold in 3.1.0 — fixed in 3.1.1.)
   - `output.runs_dir` / `output.archive_run` in config; `--runs-dir` /
     `--no-archive-run` on the CLI
   - Archiving failures are logged and swallowed — a twenty-minute run is never

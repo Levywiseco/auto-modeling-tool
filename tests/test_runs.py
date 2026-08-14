@@ -40,10 +40,16 @@ class TestRunId:
         assert "xgboost" in new_run_id("xgboost")
 
     def test_same_second_runs_do_not_collide(self):
+        """Ids must differ on identical inputs — the real caller varies nothing.
+
+        This previously passed by hand-feeding different seeds, which the
+        production path never does: a parameter sweep reuses one output
+        directory, so every run in the same second produced one id and each
+        archive silently overwrote the last.
+        """
         moment = datetime(2026, 1, 1, 9, 0, 0)
-        first = new_run_id("logistic", timestamp=moment, seed="/a")
-        second = new_run_id("logistic", timestamp=moment, seed="/b")
-        assert first != second
+        ids = {new_run_id("logistic", timestamp=moment) for _ in range(50)}
+        assert len(ids) == 50
 
     def test_unsafe_model_names_are_sanitized(self):
         run_id = new_run_id("weird/name here")
@@ -113,6 +119,54 @@ class TestArchiveRun:
     def test_missing_output_directory_raises(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             archive_run(tmp_path / "nope", runs_dir=tmp_path / "runs")
+
+    def test_same_second_archives_are_all_kept(self, tmp_path):
+        """A sweep whose runs share a second must keep every run."""
+        moment = datetime(2026, 1, 1, 9, 0, 0)
+        output = _make_output(tmp_path)
+        runs_dir = tmp_path / "runs"
+
+        for n_features in (2, 3, 4, 5, 6):
+            archive_run(
+                output,
+                runs_dir=runs_dir,
+                config={"n_features": n_features},
+                metrics={"auc_roc": 0.5 + n_features / 100},
+                model_type="logistic",
+                timestamp=moment,
+            )
+
+        archived = list_runs(runs_dir)
+        assert len(archived) == 5
+        assert sorted(r.config["n_features"] for r in archived) == [2, 3, 4, 5, 6]
+
+    def test_explicit_duplicate_run_id_is_suffixed_not_overwritten(self, tmp_path):
+        output = _make_output(tmp_path)
+        first = archive_run(
+            output, runs_dir=tmp_path / "runs", run_id="fixed", metrics={"auc_roc": 0.1}
+        )
+        second = archive_run(
+            output, runs_dir=tmp_path / "runs", run_id="fixed", metrics={"auc_roc": 0.9}
+        )
+
+        assert first != second
+        assert load_run(first).metrics["auc_roc"] == 0.1
+        assert load_run(second).metrics["auc_roc"] == 0.9
+
+    def test_run_id_and_created_at_agree(self, tmp_path):
+        """Both are derived from a single clock reading."""
+        run_dir = archive_run(
+            _make_output(tmp_path),
+            runs_dir=tmp_path / "runs",
+            metrics={},
+            model_type="logistic",
+        )
+        record = load_run(run_dir)
+        stamp = record.run_id.split("-")[0] + "-" + record.run_id.split("-")[1]
+        expected = datetime.fromisoformat(record.created_at).strftime(
+            "%Y%m%d-%H%M%S"
+        )
+        assert stamp == expected
 
 
 class TestListAndResolve:

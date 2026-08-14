@@ -18,6 +18,7 @@ loads a pickle.
 import argparse
 import json
 import shutil
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -75,7 +76,7 @@ class RunRecord:
 
 
 def _short_hash(payload: str) -> str:
-    """Six hex chars — enough to separate runs landing in the same second."""
+    """Six hex chars, enough to separate runs landing in the same second."""
     import hashlib
 
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:6]
@@ -85,13 +86,31 @@ def new_run_id(
     model_type: str = "model",
     *,
     timestamp: Optional[datetime] = None,
-    seed: str = "",
+    seed: Optional[str] = None,
 ) -> str:
-    """Build a sortable, human-readable run id."""
+    """Build a sortable, human-readable run id.
+
+    ``seed`` exists so tests can pin the hash. Callers must leave it unset: the
+    suffix has to vary per call, or a parameter sweep whose runs share a second
+    produces one id for every run and each archive overwrites the last.
+    """
     moment = timestamp or datetime.now()
     stamp = moment.strftime(RUN_ID_TIME_FORMAT)
     safe_model = "".join(c if c.isalnum() else "-" for c in str(model_type)) or "model"
-    return f"{stamp}-{safe_model}-{_short_hash(stamp + safe_model + seed)}"
+    entropy = seed if seed is not None else uuid.uuid4().hex
+    return f"{stamp}-{safe_model}-{_short_hash(stamp + safe_model + entropy)}"
+
+
+def _unique_destination(runs_dir: Path, run_id: str) -> Path:
+    """Never reuse an existing run directory; suffix instead of overwriting."""
+    destination = runs_dir / run_id
+    if not destination.exists():
+        return destination
+    for suffix in range(2, 1000):
+        candidate = runs_dir / f"{run_id}-{suffix}"
+        if not candidate.exists():
+            return candidate
+    raise FileExistsError(f"Cannot find a free run directory for {run_id}")
 
 
 def _jsonable(value: Any) -> Any:
@@ -130,13 +149,16 @@ def archive_run(
 
     config = dict(config or {})
     metrics = dict(metrics or {})
+    # One clock reading for both the id and created_at, so they cannot disagree
+    # when the call straddles a second boundary.
+    moment = timestamp or datetime.now()
     run_id = run_id or new_run_id(
         model_type or config.get("model_type", "model"),
-        timestamp=timestamp,
-        seed=str(source.resolve()),
+        timestamp=moment,
     )
 
-    destination = Path(runs_dir) / run_id
+    destination = _unique_destination(Path(runs_dir), run_id)
+    run_id = destination.name
     destination.mkdir(parents=True, exist_ok=True)
 
     for name in ARCHIVED_ARTIFACTS:
@@ -152,7 +174,7 @@ def archive_run(
 
     record = {
         "run_id": run_id,
-        "created_at": (timestamp or datetime.now()).isoformat(timespec="seconds"),
+        "created_at": moment.isoformat(timespec="seconds"),
         "task": task,
         "model_type": str(model_type or config.get("model_type", "")),
         "data_path": str(config.get("data_path", "")),
