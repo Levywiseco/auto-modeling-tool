@@ -1,13 +1,15 @@
 # This script is used to export trained models for deployment or further use.
 
-import joblib
 import os
 import sys
+
+import joblib
+
 
 def export_model(model, model_name, export_path):
     """
     Exports the trained model to the specified path using joblib.
-    
+
     Parameters:
     - model: The trained model to be exported.
     - model_name: The name of the model file (without extension).
@@ -15,7 +17,7 @@ def export_model(model, model_name, export_path):
     """
     if not os.path.exists(export_path):
         os.makedirs(export_path)
-    
+
     model_file = os.path.join(export_path, f"{model_name}.pkl")
     joblib.dump(model, model_file)
     print(f"Model exported successfully to {model_file}")

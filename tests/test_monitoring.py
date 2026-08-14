@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the monitoring module (Monitor / alerting).
 """

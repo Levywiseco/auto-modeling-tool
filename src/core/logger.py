@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Logging configuration for AutoModelTool.
 
@@ -50,7 +49,7 @@ logger.propagate = False
 if not logger.handlers:
     handler = EncodingSafeStreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
-    
+
     if COLORLOG_AVAILABLE:
         formatter = colorlog.ColoredFormatter(
             "%(log_color)s[AutoModel] %(asctime)s - %(levelname)s - %(message)s%(reset)s",
@@ -68,7 +67,7 @@ if not logger.handlers:
             "[AutoModel] %(asctime)s - %(levelname)s - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S"
         )
-    
+
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -76,12 +75,12 @@ if not logger.handlers:
 def set_log_level(level: str) -> None:
     """
     Set the logging level for AutoModel logger.
-    
+
     Parameters
     ----------
     level : str
         Log level: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
-        
+
     Example
     -------
     >>> set_log_level("DEBUG")
@@ -95,12 +94,12 @@ def set_log_level(level: str) -> None:
 def get_logger(name: Optional[str] = None) -> logging.Logger:
     """
     Get a child logger for a specific module.
-    
+
     Parameters
     ----------
     name : str, optional
         Module name for the child logger.
-        
+
     Returns
     -------
     logging.Logger

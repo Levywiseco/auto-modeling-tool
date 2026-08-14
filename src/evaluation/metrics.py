@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 High-performance evaluation metrics module using Polars.
 
@@ -6,20 +5,20 @@ This module provides efficient calculation of classification metrics
 using Polars' vectorized operations.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import polars as pl
 
-from ..core.logger import logger
 from ..core.decorators import time_it
+from ..core.logger import logger
 
 
 def accuracy(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
     *,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> float:
     """Calculate (optionally weighted) accuracy."""
     true_values = _to_numpy(y_true)
@@ -30,11 +29,11 @@ def accuracy(
 
 
 def precision(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
     *,
     pos_label: int = 1,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> float:
     """Calculate weighted precision."""
     true_values = _to_numpy(y_true)
@@ -47,11 +46,11 @@ def precision(
 
 
 def recall(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
     *,
     pos_label: int = 1,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> float:
     """Calculate weighted recall."""
     true_values = _to_numpy(y_true)
@@ -64,11 +63,11 @@ def recall(
 
 
 def f1_score(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
     *,
     pos_label: int = 1,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> float:
     """Calculate weighted F1."""
     prec = precision(y_true, y_pred, pos_label=pos_label, sample_weight=sample_weight)
@@ -78,11 +77,11 @@ def f1_score(
 
 
 def confusion_matrix(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
     *,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
-) -> Dict[str, float]:
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
+) -> dict[str, float]:
     """Return weighted confusion-matrix components."""
     true_values = _to_numpy(y_true)
     pred_values = _to_numpy(y_pred)
@@ -98,10 +97,10 @@ def confusion_matrix(
 
 @time_it
 def calculate_auc_roc(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_score: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_score: Union[pl.Series, np.ndarray, list],
     *,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> float:
     """Calculate weighted ROC AUC.
 
@@ -124,11 +123,11 @@ def calculate_auc_roc(
 
 @time_it
 def calculate_ks(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_score: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_score: Union[pl.Series, np.ndarray, list],
     *,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
-) -> Tuple[float, float]:
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
+) -> tuple[float, float]:
     """Calculate weighted Kolmogorov-Smirnov statistic."""
     target = _to_numpy(y_true).astype(float)
     score = _to_numpy(y_score).astype(float)
@@ -149,10 +148,10 @@ def calculate_ks(
 
 @time_it
 def calculate_gini(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_score: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_score: Union[pl.Series, np.ndarray, list],
     *,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> float:
     """Calculate weighted Gini."""
     auc = calculate_auc_roc(y_true, y_score, sample_weight=sample_weight)
@@ -162,11 +161,11 @@ def calculate_gini(
 
 @time_it
 def calculate_lift(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_score: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_score: Union[pl.Series, np.ndarray, list],
     *,
     n_bins: int = 10,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
 ) -> pl.DataFrame:
     """Calculate a weighted decile/lift table."""
     y_values = _to_numpy(y_true)
@@ -213,15 +212,15 @@ def calculate_lift(
 
 @time_it
 def calculate_psi(
-    expected: Union[pl.Series, np.ndarray, List],
-    actual: Union[pl.Series, np.ndarray, List],
+    expected: Union[pl.Series, np.ndarray, list],
+    actual: Union[pl.Series, np.ndarray, list],
     *,
     n_bins: int = 10,
     bin_type: str = "quantile",
     epsilon: float = 1e-10,
-    expected_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
-    actual_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
-) -> Tuple[float, pl.DataFrame]:
+    expected_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
+    actual_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
+) -> tuple[float, pl.DataFrame]:
     """Calculate PSI with optional weighted population shares."""
     expected_values = _to_numpy(expected).astype(float)
     actual_values = _to_numpy(actual).astype(float)
@@ -279,13 +278,13 @@ def calculate_psi(
 def calculate_feature_psi(
     expected_df: pl.DataFrame,
     actual_df: pl.DataFrame,
-    features: Optional[List[str]] = None,
+    features: Optional[list[str]] = None,
     *,
     n_bins: int = 10,
 ) -> pl.DataFrame:
     """
     Calculate PSI for multiple features.
-    
+
     Parameters
     ----------
     expected_df : pl.DataFrame
@@ -296,12 +295,12 @@ def calculate_feature_psi(
         Features to calculate PSI for. If None, uses all numeric columns.
     n_bins : int, default 10
         Number of bins for PSI calculation.
-        
+
     Returns
     -------
     pl.DataFrame
         PSI table with columns: feature, psi, interpretation
-        
+
     Example
     -------
     >>> psi_df = calculate_feature_psi(train_df, test_df)
@@ -314,7 +313,7 @@ def calculate_feature_psi(
             pl.Float32, pl.Float64
         }
         features = [c for c in expected_df.columns if expected_df[c].dtype in NUMERIC_DTYPES]
-    
+
     def interpret_psi(psi: float) -> str:
         if psi < 0.1:
             return "Stable"
@@ -322,13 +321,13 @@ def calculate_feature_psi(
             return "Moderate Shift"
         else:
             return "Significant Shift"
-    
+
     results = []
-    
+
     for feature in features:
         if feature not in expected_df.columns or feature not in actual_df.columns:
             continue
-        
+
         try:
             psi_val, _ = calculate_psi(
                 expected_df[feature],
@@ -342,17 +341,17 @@ def calculate_feature_psi(
             })
         except Exception as e:
             logger.warning(f"PSI calculation failed for {feature}: {e}")
-    
+
     return pl.DataFrame(results).sort("psi", descending=True)
 
 
 @time_it
 def calculate_regression_metrics(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
     *,
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
-) -> Dict[str, float]:
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
+) -> dict[str, float]:
     """Calculate RMSE, MAE and R-squared for continuous targets."""
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -382,13 +381,13 @@ def calculate_regression_metrics(
 
 @time_it
 def calculate_all_metrics(
-    y_true: Union[pl.Series, np.ndarray, List],
-    y_pred: Union[pl.Series, np.ndarray, List],
-    y_score: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    y_true: Union[pl.Series, np.ndarray, list],
+    y_pred: Union[pl.Series, np.ndarray, list],
+    y_score: Optional[Union[pl.Series, np.ndarray, list]] = None,
     *,
     task: str = "classification",
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
-) -> Dict[str, float]:
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]] = None,
+) -> dict[str, float]:
     """Calculate common weighted classification or regression metrics."""
     logger.info("📊 Calculating all metrics...")
     if task == "regression":
@@ -431,7 +430,7 @@ def calculate_all_metrics(
 
 
 def _validated_weights(
-    sample_weight: Optional[Union[pl.Series, np.ndarray, List]],
+    sample_weight: Optional[Union[pl.Series, np.ndarray, list]],
     n_rows: int,
 ) -> np.ndarray:
     if sample_weight is None:
@@ -444,14 +443,14 @@ def _validated_weights(
     return values
 
 
-def _to_series(data: Union[pl.Series, np.ndarray, List], name: str = "data") -> pl.Series:
+def _to_series(data: Union[pl.Series, np.ndarray, list], name: str = "data") -> pl.Series:
     """Convert input to Polars Series."""
     if isinstance(data, pl.Series):
         return data
     return pl.Series(name, data)
 
 
-def _to_numpy(data: Union[pl.Series, np.ndarray, List]) -> np.ndarray:
+def _to_numpy(data: Union[pl.Series, np.ndarray, list]) -> np.ndarray:
     """Convert input to numpy array."""
     if isinstance(data, pl.Series):
         return data.to_numpy()
@@ -460,15 +459,15 @@ def _to_numpy(data: Union[pl.Series, np.ndarray, List]) -> np.ndarray:
     return data
 
 
-def format_metrics_table(metrics: Dict[str, float]) -> pl.DataFrame:
+def format_metrics_table(metrics: dict[str, float]) -> pl.DataFrame:
     """
     Format metrics dictionary as a Polars DataFrame table.
-    
+
     Parameters
     ----------
     metrics : dict
         Metrics dictionary from calculate_all_metrics.
-        
+
     Returns
     -------
     pl.DataFrame

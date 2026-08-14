@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AutoModelTool - High-Performance Auto-Modeling Framework
 
@@ -38,6 +37,45 @@ __author__ = "AutoModelTool Team"
 # Task-oriented workflow entry points
 from .analysis import profile_data, profile_risk
 
+# Binning module
+from .binning import (
+    WoeBinner,
+    calculate_psi,
+)
+
+# Core components
+from .core import (
+    DataTypeError,
+    MarsBaseEstimator,
+    MarsTransformer,
+    NotFittedError,
+    ValidationError,
+    auto_polars,
+    logger,
+    time_it,
+)
+
+# Data module
+from .data import (
+    DataPreprocessor,
+    load_data,
+    stratified_train_test_split,
+)
+
+# Evaluation module
+from .evaluation import (
+    calculate_all_metrics,
+    calculate_auc_roc,
+    calculate_ks,
+)
+
+# Feature module
+from .features import (
+    FeatureGenerator,
+    FeatureSelector,
+    calculate_feature_importance,
+)
+
 # Monitoring
 from .monitoring import AlertConfig, Monitor, generate_monitoring_alert
 
@@ -49,52 +87,13 @@ from .reports import (
     RiskProfile,
 )
 
-# Core components
-from .core import (
-    MarsBaseEstimator,
-    MarsTransformer,
-    NotFittedError,
-    DataTypeError,
-    ValidationError,
-    time_it,
-    auto_polars,
-    logger,
-)
-
-# Data module
-from .data import (
-    load_data,
-    DataPreprocessor,
-    stratified_train_test_split,
-)
-
-# Binning module
-from .binning import (
-    WoeBinner,
-    calculate_psi,
-)
-
-# Feature module
-from .features import (
-    FeatureSelector,
-    FeatureGenerator,
-    calculate_feature_importance,
-)
-
-# Evaluation module
-from .evaluation import (
-    calculate_all_metrics,
-    calculate_ks,
-    calculate_auc_roc,
-)
-
 # Utils module
 from .utils import (
-    save_model,
+    generate_model_report,
+    load_dataframe,
     load_model,
     save_dataframe,
-    load_dataframe,
-    generate_model_report,
+    save_model,
 )
 
 __all__ = [

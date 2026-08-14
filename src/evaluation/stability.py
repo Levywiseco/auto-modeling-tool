@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Stability metrics on binned distributions.
 
 Shared by ``src.analysis.profile_risk`` and ``src.monitoring.Monitor``:
@@ -9,7 +8,7 @@ Bin index protocol (from :class:`~src.binning.WoeBinner`):
 missing = -1, other = -2, special values start at -3 descending.
 """
 
-from typing import Dict, Optional
+from typing import Optional
 
 import polars as pl
 
@@ -20,7 +19,7 @@ IDX_OTHER = -2
 def bin_distribution(
     binned: pl.Series,
     sample_weight: Optional[pl.Series] = None,
-) -> Dict[int, float]:
+) -> dict[int, float]:
     """Share of rows per bin index, optionally using sample weights."""
     if binned.len() == 0:
         return {}
@@ -33,7 +32,7 @@ def bin_distribution(
     total = float(sum(weight for weight in weights if weight is not None))
     if total <= 0:
         return {}
-    shares: Dict[int, float] = {}
+    shares: dict[int, float] = {}
     for index, weight in zip(binned.to_list(), weights):
         if index is None or weight is None:
             continue
@@ -43,8 +42,8 @@ def bin_distribution(
 
 
 def psi_from_distributions(
-    expected: Dict[int, float],
-    actual: Dict[int, float],
+    expected: dict[int, float],
+    actual: dict[int, float],
     *,
     include_missing: bool = False,
     include_special: bool = False,

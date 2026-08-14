@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Leakage-safe, configuration-driven classification pipeline."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import polars as pl
@@ -62,7 +61,7 @@ class AutoPipeline:
         dev_label: Any = "dev",
         oot_label: Any = "oot",
         model_type: str = "logistic",
-        model_params: Optional[Dict[str, Any]] = None,
+        model_params: Optional[dict[str, Any]] = None,
         early_stopping_eval: str = "none",
         early_stopping_rounds: Optional[int] = None,
         early_stopping_metric: Optional[str] = None,
@@ -103,11 +102,11 @@ class AutoPipeline:
         self.binner_: Optional[WoeBinner] = None
         self.selector_: Optional[FeatureSelector] = None
         self.model_: Optional[Any] = None
-        self.metrics_: Optional[Dict[str, float]] = None
-        self.dev_metrics_: Optional[Dict[str, float]] = None
-        self.selected_features_: List[str] = []
-        self.woe_feature_columns_: List[str] = []
-        self.feature_columns_: List[str] = []
+        self.metrics_: Optional[dict[str, float]] = None
+        self.dev_metrics_: Optional[dict[str, float]] = None
+        self.selected_features_: list[str] = []
+        self.woe_feature_columns_: list[str] = []
+        self.feature_columns_: list[str] = []
         self.feature_importance_: Optional[pl.DataFrame] = None
         self.split_: Optional[DatasetSplit] = None
         self.weight_col_: Optional[str] = None
@@ -122,10 +121,10 @@ class AutoPipeline:
         self._y_oot: Optional[pl.Series] = None
         self._weight_dev: Optional[pl.Series] = None
         self._weight_oot: Optional[pl.Series] = None
-        self.report_tables_: Dict[str, Any] = {}
-        self.segment_cols_: List[str] = []
+        self.report_tables_: dict[str, Any] = {}
+        self.segment_cols_: list[str] = []
         self.temporal_col_: Optional[str] = None
-        self.benchmark_cols_: List[str] = []
+        self.benchmark_cols_: list[str] = []
         self._dev_frame: Optional[pl.DataFrame] = None
         self._oot_frame: Optional[pl.DataFrame] = None
 
@@ -365,7 +364,7 @@ class AutoPipeline:
         X: pl.DataFrame,
         y: pl.Series,
         sample_weight: Optional[pl.Series] = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         if self.model_ is None:
             raise ValidationError("Pipeline not fitted. Call fit() first.")
         y_pred = self.model_.predict(X.to_numpy())
@@ -386,7 +385,7 @@ class AutoPipeline:
         self,
         X_test: Optional[pl.DataFrame] = None,
         y_test: Optional[pl.Series] = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Evaluate on OOT by default; external X must contain raw drivers."""
         if self.model_ is None:
             raise ValidationError("Pipeline not fitted. Call fit() first.")
@@ -422,9 +421,9 @@ class AutoPipeline:
         woe = self.binner_.transform(transformed, return_type="woe")
         return self.selector_.transform(woe.select(self.woe_feature_columns_))
 
-    def _build_report_tables(self) -> Dict[str, Any]:
+    def _build_report_tables(self) -> dict[str, Any]:
         """Build stable audit tables mirroring the guide's report contract."""
-        tables: Dict[str, Any] = {}
+        tables: dict[str, Any] = {}
         if self.binner_ is not None and self._X_dev_transformed is not None:
             try:
                 tables["Binning_Summary"] = self.binner_.compute_bin_stats(
@@ -628,7 +627,7 @@ class AutoPipeline:
             return_proba=return_proba,
         )
 
-    def get_scoring_artifact(self) -> Dict[str, Any]:
+    def get_scoring_artifact(self) -> dict[str, Any]:
         if self.model_ is None:
             raise ValidationError("Pipeline not fitted. Call fit() first.")
         return build_scoring_artifact(
@@ -804,7 +803,7 @@ def run_pipeline(
     target_col: str,
     output_dir: str = "output",
     **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Functional API for the classification pipeline."""
     pipeline = AutoPipeline(target_col=target_col, **kwargs)
     pipeline.fit(data_path, **kwargs)

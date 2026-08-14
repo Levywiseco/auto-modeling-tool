@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Chinese-language alert text generation from monitoring reports."""
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from ..reports import MonitoringReport
 
@@ -36,7 +35,7 @@ def generate_monitoring_alert(
     report: MonitoringReport,
     *,
     score_col: Optional[str] = None,
-    model_features: Optional[List[str]] = None,
+    model_features: Optional[list[str]] = None,
     config: Optional[AlertConfig] = None,
 ) -> str:
     """Render a monitoring report as a priority-sorted Chinese alert digest.
@@ -61,8 +60,8 @@ def generate_monitoring_alert(
     """
     cfg = config or AlertConfig()
     model_features = model_features or []
-    critical: List[str] = []
-    warn: List[str] = []
+    critical: list[str] = []
+    warn: list[str] = []
 
     def push(level: Optional[str], text: str, is_model: bool = False) -> None:
         if level == "critical":

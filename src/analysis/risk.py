@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 """Feature risk profiling workflow: binning + evaluation in one call."""
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 import polars as pl
 
@@ -39,7 +38,7 @@ def _ks_from_bin_stats(stats: pl.DataFrame) -> float:
     return ks
 
 
-def _is_monotonic(woes: List[float]) -> bool:
+def _is_monotonic(woes: list[float]) -> bool:
     if len(woes) < 2:
         return True
     inc = all(b >= a for a, b in zip(woes, woes[1:]))
@@ -51,12 +50,12 @@ def profile_risk(
     df: Any,
     *,
     target: str,
-    features: Optional[List[str]] = None,
+    features: Optional[list[str]] = None,
     group_col: Optional[str] = None,
     method: Literal["quantile", "uniform", "cart"] = "quantile",
     n_bins: int = 5,
-    missing_values: Optional[List[Any]] = None,
-    special_values: Optional[List[Any]] = None,
+    missing_values: Optional[list[Any]] = None,
+    special_values: Optional[list[Any]] = None,
     psi_include_missing: bool = False,
     psi_include_special: bool = False,
     monotonic: bool = False,
@@ -156,8 +155,8 @@ def profile_risk(
         detail = detail.sort(["feature", "bin_idx"])
 
     # ---- per-group structures for PSI / trends -------------------------
-    trend_tables: Dict[str, pl.DataFrame] = {}
-    psi_max: Dict[str, float] = {}
+    trend_tables: dict[str, pl.DataFrame] = {}
+    psi_max: dict[str, float] = {}
 
     if group_col:
         if group_col not in df.columns:
@@ -176,8 +175,8 @@ def profile_risk(
             bench_dist = bin_distribution(
                 binned_all.filter(pl.col(group_col) == bench_group)[bin_col]
             )
-            psi_row: Dict[str, Any] = {"feature": c}
-            miss_row: Dict[str, Any] = {"feature": c}
+            psi_row: dict[str, Any] = {"feature": c}
+            miss_row: dict[str, Any] = {"feature": c}
             worst = 0.0
             for g in groups:
                 part = binned_all.filter(pl.col(group_col) == g)
@@ -218,7 +217,7 @@ def profile_risk(
         if X.schema[c] in (pl.Float32, pl.Float64):
             missing_expr = missing_expr | pl.col(c).is_nan()
         iv = binner.total_iv_.get(c, 0.0)
-        row: Dict[str, Any] = {
+        row: dict[str, Any] = {
             "feature": c,
             "iv": round(iv, 6),
             "iv_strength": _interpret_iv(iv),

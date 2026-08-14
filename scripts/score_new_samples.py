@@ -2,8 +2,8 @@
 """Score raw driver data with a saved scoring artifact."""
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import polars as pl
 

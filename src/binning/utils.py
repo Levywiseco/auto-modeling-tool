@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Binning utility functions using Polars for high-performance operations.
 
@@ -6,13 +5,13 @@ This module provides standalone functions for binning operations that can be
 used independently or as building blocks for more complex binning strategies.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import polars as pl
 
-from ..core.logger import logger
 from ..core.decorators import time_it
+from ..core.logger import logger
 
 
 @time_it
@@ -22,11 +21,11 @@ def calculate_bins(
     num_bins: int,
     *,
     method: str = "uniform",
-    exclude_values: Optional[List[Any]] = None,
-) -> List[float]:
+    exclude_values: Optional[list[Any]] = None,
+) -> list[float]:
     """
     Calculate bin edges for a given column using various methods.
-    
+
     Parameters
     ----------
     data : pl.DataFrame or pl.LazyFrame
@@ -39,12 +38,12 @@ def calculate_bins(
         Binning method: "uniform" (equal-width) or "quantile" (equal-frequency).
     exclude_values : list, optional
         Values to exclude from bin calculation (e.g., missing indicators).
-        
+
     Returns
     -------
     list of float
         Bin edges including -inf and inf: [-inf, cut1, cut2, ..., inf]
-        
+
     Example
     -------
     >>> edges = calculate_bins(df, "age", 5, method="quantile")
@@ -54,14 +53,14 @@ def calculate_bins(
     # Materialize if LazyFrame
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    
+
     # Build filter expression
     filter_expr = pl.col(column).is_not_null()
-    
+
     # Check for float columns and handle NaN
     if data[column].dtype in [pl.Float32, pl.Float64]:
         filter_expr = filter_expr & (~pl.col(column).is_nan())
-    
+
     # Exclude special values
     if exclude_values:
         # Filter compatible types
@@ -74,44 +73,44 @@ def calculate_bins(
                 safe_exclude.append(v)
             elif dtype in [pl.Utf8, pl.String] and isinstance(v, str):
                 safe_exclude.append(v)
-        
+
         if safe_exclude:
             filter_expr = filter_expr & (~pl.col(column).is_in(safe_exclude))
-    
+
     # Get filtered data
     filtered = data.filter(filter_expr)
-    
+
     if len(filtered) == 0:
         logger.warning(f"Column '{column}' has no valid values after filtering")
         return [float('-inf'), float('inf')]
-    
+
     if method == "uniform":
         # Equal-width binning
         min_val = filtered.select(pl.col(column).min()).item()
         max_val = filtered.select(pl.col(column).max()).item()
-        
+
         if min_val == max_val:
             return [float('-inf'), float('inf')]
-        
+
         step = (max_val - min_val) / num_bins
         cuts = [min_val + step * i for i in range(1, num_bins)]
-        
+
     elif method == "quantile":
         # Equal-frequency binning
         quantiles = np.linspace(0, 1, num_bins + 1)[1:-1].tolist()
-        
+
         q_exprs = [
             pl.col(column).quantile(q).alias(f"q{i}")
             for i, q in enumerate(quantiles)
         ]
-        
+
         q_result = filtered.select(q_exprs).row(0)
         cuts = [float(v) for v in q_result if v is not None]
         cuts = sorted(set(cuts))  # Remove duplicates
-        
+
     else:
         raise ValueError(f"Unknown method: {method}. Use 'uniform' or 'quantile'.")
-    
+
     return [float('-inf')] + cuts + [float('inf')]
 
 
@@ -119,14 +118,14 @@ def calculate_bins(
 def apply_binning(
     data: Union[pl.DataFrame, pl.LazyFrame],
     column: str,
-    bin_edges: List[float],
+    bin_edges: list[float],
     *,
     missing_bin: int = -1,
-    special_values: Optional[Dict[Any, int]] = None,
+    special_values: Optional[dict[Any, int]] = None,
 ) -> pl.Series:
     """
     Apply binning to a column using provided bin edges.
-    
+
     Parameters
     ----------
     data : pl.DataFrame or pl.LazyFrame
@@ -139,12 +138,12 @@ def apply_binning(
         Bin index for missing values.
     special_values : dict, optional
         Mapping of special values to bin indices, e.g., {-999: -3, -1: -4}.
-        
+
     Returns
     -------
     pl.Series
         Bin indices as Int16 series.
-        
+
     Example
     -------
     >>> bins = apply_binning(df, "age", [-inf, 25, 50, inf])
@@ -155,27 +154,27 @@ def apply_binning(
     # Materialize if LazyFrame
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    
+
     # Build binning expression
     result_expr = pl.when(pl.col(column).is_null()).then(pl.lit(missing_bin))
-    
+
     # Handle NaN for float columns
     if data[column].dtype in [pl.Float32, pl.Float64]:
         result_expr = result_expr.when(pl.col(column).is_nan()).then(pl.lit(missing_bin))
-    
+
     # Handle special values
     if special_values:
         for val, bin_idx in special_values.items():
             result_expr = result_expr.when(pl.col(column) == val).then(pl.lit(bin_idx))
-    
+
     # Apply bin edges (excluding -inf and inf)
     inner_edges = bin_edges[1:-1]
     for i, edge in enumerate(inner_edges):
         result_expr = result_expr.when(pl.col(column) < edge).then(pl.lit(i))
-    
+
     # Last bin
     result_expr = result_expr.otherwise(pl.lit(len(inner_edges)))
-    
+
     return data.select(result_expr.cast(pl.Int16).alias(f"{column}_bin")).get_column(f"{column}_bin")
 
 
@@ -189,9 +188,9 @@ def calculate_woe(
 ) -> pl.DataFrame:
     """
     Calculate WOE (Weight of Evidence) values for a binned column.
-    
+
     Uses Polars vectorized operations for optimal performance.
-    
+
     Parameters
     ----------
     data : pl.DataFrame or pl.LazyFrame
@@ -202,12 +201,12 @@ def calculate_woe(
         Name of the column containing bin indices.
     smooth : float, default 0.5
         Smoothing factor to avoid division by zero and log(0).
-        
+
     Returns
     -------
     pl.DataFrame
         DataFrame with columns: bin_idx, count, bad, good, bad_rate, woe, iv
-        
+
     Example
     -------
     >>> woe_df = calculate_woe(df, "target", "age_bin")
@@ -224,16 +223,16 @@ def calculate_woe(
     # Materialize if LazyFrame
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    
+
     # Calculate totals
     total_bad = data.select(pl.col(target).sum()).item()
     total_good = len(data) - total_bad
-    
+
     if total_bad == 0 or total_good == 0:
         logger.warning("Target has only one class, WOE calculation may be unreliable")
         total_bad = max(total_bad, 1)
         total_good = max(total_good, 1)
-    
+
     # Aggregate by bin
     result = (
         data.group_by(bin_column)
@@ -260,7 +259,7 @@ def calculate_woe(
         .rename({bin_column: "bin_idx"})
         .select(["bin_idx", "count", "bad", "good", "bad_rate", "woe", "iv"])
     )
-    
+
     return result
 
 
@@ -272,12 +271,12 @@ def binning_with_woe(
     num_bins: int,
     *,
     method: str = "quantile",
-    exclude_values: Optional[List[Any]] = None,
-    special_values: Optional[Dict[Any, int]] = None,
-) -> Dict[str, Any]:
+    exclude_values: Optional[list[Any]] = None,
+    special_values: Optional[dict[Any, int]] = None,
+) -> dict[str, Any]:
     """
     Complete binning pipeline: calculate bins, apply, and compute WOE.
-    
+
     Parameters
     ----------
     data : pl.DataFrame or pl.LazyFrame
@@ -294,7 +293,7 @@ def binning_with_woe(
         Values to exclude from bin calculation.
     special_values : dict, optional
         Mapping of special values to bin indices.
-        
+
     Returns
     -------
     dict
@@ -303,7 +302,7 @@ def binning_with_woe(
         - 'woe_table': DataFrame with WOE statistics
         - 'total_iv': Total Information Value
         - 'binned_column': Name of the binned column
-        
+
     Example
     -------
     >>> result = binning_with_woe(df, "target", "age", 5)
@@ -316,34 +315,34 @@ def binning_with_woe(
     # Materialize if LazyFrame
     if isinstance(data, pl.LazyFrame):
         data = data.collect()
-    
+
     logger.info(f"🔧 Binning column '{column}' with {num_bins} bins")
-    
+
     # Step 1: Calculate bin edges
     bin_edges = calculate_bins(
-        data, column, num_bins, 
-        method=method, 
+        data, column, num_bins,
+        method=method,
         exclude_values=exclude_values
     )
-    
+
     # Step 2: Apply binning
     bin_column = f"{column}_bin"
     binned_series = apply_binning(
-        data, column, bin_edges, 
+        data, column, bin_edges,
         special_values=special_values
     )
-    
+
     # Add binned column to data
     data_with_bins = data.with_columns(binned_series)
-    
+
     # Step 3: Calculate WOE
     woe_table = calculate_woe(data_with_bins, target, bin_column)
-    
+
     # Calculate total IV
     total_iv = woe_table.select(pl.col("iv").sum()).item()
-    
+
     logger.info(f"✅ Binning complete. Total IV: {total_iv:.4f}")
-    
+
     return {
         'bin_edges': bin_edges,
         'woe_table': woe_table,
@@ -355,12 +354,12 @@ def binning_with_woe(
 def interpret_iv(iv: float) -> str:
     """
     Interpret Information Value for predictive power.
-    
+
     Parameters
     ----------
     iv : float
         Information Value.
-        
+
     Returns
     -------
     str
@@ -387,7 +386,7 @@ def calculate_psi(
 ) -> float:
     """
     Calculate Population Stability Index (PSI) between two distributions.
-    
+
     Parameters
     ----------
     expected : pl.Series
@@ -396,7 +395,7 @@ def calculate_psi(
         Actual (current) binned values.
     smooth : float, default 0.0001
         Smoothing factor to avoid log(0).
-        
+
     Returns
     -------
     float
@@ -404,7 +403,7 @@ def calculate_psi(
         - < 0.1: No significant change
         - 0.1 - 0.25: Moderate change
         - > 0.25: Significant change
-        
+
     Example
     -------
     >>> psi = calculate_psi(train_bins, test_bins)
@@ -418,14 +417,14 @@ def calculate_psi(
             (pl.col("count") / pl.col("count").sum()).alias("pct")
         )
     )
-    
+
     actual_dist = (
         actual.value_counts()
         .with_columns(
             (pl.col("count") / pl.col("count").sum()).alias("pct")
         )
     )
-    
+
     # Join distributions
     col_name = expected.name
     combined = (
@@ -441,11 +440,11 @@ def calculate_psi(
             pl.col("actual").clip(smooth, 1.0),
         ])
     )
-    
+
     # Calculate PSI
     psi = combined.select(
-        ((pl.col("actual") - pl.col("expected")) * 
+        ((pl.col("actual") - pl.col("expected")) *
          (pl.col("actual") / pl.col("expected")).log()).sum()
     ).item()
-    
+
     return float(psi)

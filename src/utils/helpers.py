@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Utility helper functions for AutoModelTool.
 
@@ -6,11 +5,10 @@ This module provides common conversion and validation functions
 used across the package.
 """
 
-from typing import Any, List, Union, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import polars as pl
-
 
 NUMERIC_DTYPES = {
     pl.Int8, pl.Int16, pl.Int32, pl.Int64,
@@ -26,7 +24,7 @@ def to_polars_series(
 ) -> pl.Series:
     """
     Convert any array-like to Polars Series.
-    
+
     Parameters
     ----------
     data : Any
@@ -35,12 +33,12 @@ def to_polars_series(
         Name for the resulting Series.
     dtype : pl.DataType, optional
         Target data type.
-        
+
     Returns
     -------
     pl.Series
         Converted Polars Series.
-        
+
     Example
     -------
     >>> s = to_polars_series([1, 2, 3], "values")
@@ -48,30 +46,30 @@ def to_polars_series(
     """
     if isinstance(data, pl.Series):
         return data.alias(name) if name != data.name else data
-    
+
     if isinstance(data, np.ndarray):
         return pl.Series(name, data, dtype=dtype)
-    
+
     if hasattr(data, '__iter__') and not isinstance(data, str):
         return pl.Series(name, list(data), dtype=dtype)
-    
+
     raise TypeError(f"Cannot convert {type(data)} to Polars Series")
 
 
 def to_numpy(data: Any) -> np.ndarray:
     """
     Convert any array-like to numpy array.
-    
+
     Parameters
     ----------
     data : Any
         Input data (list, numpy array, pandas Series, or Polars Series).
-        
+
     Returns
     -------
     np.ndarray
         Converted numpy array.
-        
+
     Example
     -------
     >>> arr = to_numpy([1, 2, 3])
@@ -79,28 +77,28 @@ def to_numpy(data: Any) -> np.ndarray:
     """
     if isinstance(data, np.ndarray):
         return data
-    
+
     if isinstance(data, pl.Series):
         return data.to_numpy()
-    
+
     if isinstance(data, list):
         return np.array(data)
-    
+
     if hasattr(data, 'to_numpy'):
         return data.to_numpy()
-    
+
     return np.array(data)
 
 
-def get_numeric_columns(df: pl.DataFrame) -> List[str]:
+def get_numeric_columns(df: pl.DataFrame) -> list[str]:
     """
     Get list of numeric column names from DataFrame.
-    
+
     Parameters
     ----------
     df : pl.DataFrame
         Input DataFrame.
-        
+
     Returns
     -------
     List[str]
@@ -109,15 +107,15 @@ def get_numeric_columns(df: pl.DataFrame) -> List[str]:
     return [col for col in df.columns if df[col].dtype in NUMERIC_DTYPES]
 
 
-def get_categorical_columns(df: pl.DataFrame) -> List[str]:
+def get_categorical_columns(df: pl.DataFrame) -> list[str]:
     """
     Get list of categorical/string column names from DataFrame.
-    
+
     Parameters
     ----------
     df : pl.DataFrame
         Input DataFrame.
-        
+
     Returns
     -------
     List[str]
@@ -133,14 +131,14 @@ def validate_binary_target(
 ) -> None:
     """
     Validate that target variable is binary.
-    
+
     Parameters
     ----------
     y : pl.Series or np.ndarray
         Target variable.
     name : str, default "target"
         Name for error messages.
-        
+
     Raises
     ------
     ValueError
@@ -153,10 +151,10 @@ def validate_binary_target(
         y = np.array(y)
         n_unique = len(np.unique(y[~np.isnan(y)]))
         null_count = np.isnan(y).sum()
-    
+
     if null_count > 0:
         raise ValueError(f"{name} contains {null_count} null values")
-    
+
     if n_unique != 2:
         raise ValueError(
             f"{name} must be binary (exactly 2 unique values), "
@@ -170,14 +168,14 @@ def validate_no_nulls(
 ) -> None:
     """
     Validate that data contains no null values.
-    
+
     Parameters
     ----------
     data : pl.DataFrame or pl.Series
         Data to validate.
     name : str, default "data"
         Name for error messages.
-        
+
     Raises
     ------
     ValueError
@@ -201,7 +199,7 @@ def safe_divide(
 ) -> Union[float, np.ndarray]:
     """
     Safe division that handles division by zero.
-    
+
     Parameters
     ----------
     numerator : float or np.ndarray
@@ -212,7 +210,7 @@ def safe_divide(
         Value to use when denominator is zero.
     eps : float, default 1e-10
         Small value to prevent division by zero.
-        
+
     Returns
     -------
     float or np.ndarray
@@ -226,7 +224,7 @@ def safe_divide(
         )
     else:
         result = numerator / denominator if abs(denominator) >= eps else fill_value
-    
+
     return result
 
 
@@ -236,19 +234,19 @@ def ensure_dataframe(
 ) -> pl.DataFrame:
     """
     Ensure input is a Polars DataFrame.
-    
+
     Parameters
     ----------
     data : Any
         Input data.
     name : str, default "data"
         Name for error messages.
-        
+
     Returns
     -------
     pl.DataFrame
         Polars DataFrame.
-        
+
     Raises
     ------
     TypeError
@@ -256,19 +254,19 @@ def ensure_dataframe(
     """
     if isinstance(data, pl.DataFrame):
         return data
-    
+
     if isinstance(data, pl.LazyFrame):
         return data.collect()
-    
+
     if isinstance(data, dict):
         return pl.DataFrame(data)
-    
+
     if hasattr(data, 'to_pandas'):
         return pl.from_pandas(data.to_pandas())
-    
+
     if hasattr(data, 'to_dict'):
         return pl.DataFrame(data.to_dict())
-    
+
     raise TypeError(
         f"Cannot convert {type(data)} to Polars DataFrame. "
         f"Expected pl.DataFrame, dict, or object with to_pandas() method."

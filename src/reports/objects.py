@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Report dataclasses shared by analysis / monitoring workflows.
 
 Conventions (mirrored across every report object):
@@ -14,7 +13,7 @@ Pandas view is needed downstream.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import polars as pl
 
@@ -53,7 +52,7 @@ class _MarkdownReportMixin:
 
     _title: str = "Report"
 
-    def _sections(self) -> List[tuple]:
+    def _sections(self) -> list[tuple]:
         """Return (section_title, table_or_text) pairs. Overridden by subclasses."""
         raise NotImplementedError
 
@@ -107,12 +106,12 @@ class DataProfileReport(_MarkdownReportMixin):
     overview_table: pl.DataFrame
     dq_table: pl.DataFrame
     stats_table: pl.DataFrame
-    trend_tables: Dict[str, pl.DataFrame] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    trend_tables: dict[str, pl.DataFrame] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     _title = "Data Profile Report"
 
-    def _sections(self) -> List[tuple]:
+    def _sections(self) -> list[tuple]:
         sections = [
             ("Overview", self.overview_table),
             ("Data Quality", self.dq_table),
@@ -143,12 +142,12 @@ class BinningReport(_MarkdownReportMixin):
 
     summary_table: pl.DataFrame
     detail_table: pl.DataFrame
-    trend_tables: Dict[str, pl.DataFrame] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    trend_tables: dict[str, pl.DataFrame] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     _title = "Binning & Risk Evaluation Report"
 
-    def _sections(self) -> List[tuple]:
+    def _sections(self) -> list[tuple]:
         sections = [
             ("Feature Summary", self.summary_table),
             ("Bin Detail", self.detail_table),
@@ -182,9 +181,9 @@ class RiskProfile:
 
     report: BinningReport
     binner: "WoeBinner"
-    features: List[str]
+    features: list[str]
     target: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def summary_table(self) -> pl.DataFrame:
@@ -223,15 +222,15 @@ class MonitoringReport(_MarkdownReportMixin):
 
     summary_table: pl.DataFrame
     detail_table: pl.DataFrame
-    trend_tables: Dict[str, pl.DataFrame] = field(default_factory=dict)
-    features: List[str] = field(default_factory=list)
+    trend_tables: dict[str, pl.DataFrame] = field(default_factory=dict)
+    features: list[str] = field(default_factory=list)
     target: Optional[str] = None
     binner: Optional["WoeBinner"] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     _title = "Monitoring Report"
 
-    def _sections(self) -> List[tuple]:
+    def _sections(self) -> list[tuple]:
         sections = [("Feature Summary", self.summary_table)]
         for name, table in self.trend_tables.items():
             sections.append((f"Trend · {name}", table))

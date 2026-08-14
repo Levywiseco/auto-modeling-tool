@@ -3,9 +3,9 @@
 
 import argparse
 import json
-from pathlib import Path
 import sys
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Optional
 
 import numpy as np
 import polars as pl
@@ -17,7 +17,6 @@ from src.data.loaders import load_data
 from src.data.split import split_dev_oot
 from src.evaluation.stability import psi_from_distributions
 from src.reports.excel import write_model_report
-
 
 NUMERIC_DTYPES = {
     pl.Int8, pl.Int16, pl.Int32, pl.Int64,
@@ -53,14 +52,14 @@ def _weighted_mean(
 def _weighted_distribution(
     series: pl.Series,
     weight: Optional[pl.Series] = None,
-) -> Dict[int, float]:
+) -> dict[int, float]:
     weights = (
         np.ones(len(series), dtype=float)
         if weight is None
         else weight.to_numpy().astype(float)
     )
     total = float(weights.sum())
-    result: Dict[int, float] = {}
+    result: dict[int, float] = {}
     for value, current_weight in zip(series.to_list(), weights):
         if value is None:
             continue
@@ -69,7 +68,7 @@ def _weighted_distribution(
     return {key: value / total for key, value in result.items()} if total else {}
 
 
-def _numeric_stats(frame: pl.DataFrame, columns: List[str]) -> List[Dict[str, Any]]:
+def _numeric_stats(frame: pl.DataFrame, columns: list[str]) -> list[dict[str, Any]]:
     rows = []
     for column in columns:
         series = frame[column]
@@ -92,7 +91,7 @@ def _numeric_stats(frame: pl.DataFrame, columns: List[str]) -> List[Dict[str, An
     return rows
 
 
-def _categorical_stats(frame: pl.DataFrame, columns: List[str]) -> List[Dict[str, Any]]:
+def _categorical_stats(frame: pl.DataFrame, columns: list[str]) -> list[dict[str, Any]]:
     rows = []
     for column in columns:
         counts = (
@@ -118,12 +117,12 @@ def _feature_tables(
     oot: pl.DataFrame,
     *,
     target_col: str,
-    feature_columns: List[str],
+    feature_columns: list[str],
     weight_col: Optional[str],
     use_sample_weight: bool,
     n_bins: int,
     export_woe_detail: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     dev_weight = (
         dev[weight_col].cast(pl.Float64)
         if use_sample_weight and weight_col
@@ -173,7 +172,7 @@ def _feature_tables(
             "dtype": str(dev[feature].dtype),
         })
 
-    tables: Dict[str, Any] = {
+    tables: dict[str, Any] = {
         "7_IV_DEV": iv_dev,
         "8_IV_OOT": iv_oot,
         "9_PSI_Numeric": [
@@ -252,14 +251,14 @@ def main() -> int:
         }
         for column in frame.columns
     ]
-    overview: Dict[str, Any] = {
+    overview: dict[str, Any] = {
         "rows": len(frame),
         "columns": len(frame.columns),
         "numeric_features": len(numeric_columns),
         "categorical_features": len(categorical_columns),
         "column_names": frame.columns,
     }
-    tables: Dict[str, Any] = {
+    tables: dict[str, Any] = {
         "1_Overview": overview,
         "2_Missing_Rate": missing,
         "3_Num_Dist_DEV": _numeric_stats(frame, numeric_columns),

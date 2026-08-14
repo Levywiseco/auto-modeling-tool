@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Excel audit report contract tests."""
 
 from pathlib import Path

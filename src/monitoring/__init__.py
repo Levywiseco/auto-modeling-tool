@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Feature and model monitoring: drift, stability, and alerting.
 
 Fit binning rules on a benchmark slice, bucket every period with the same

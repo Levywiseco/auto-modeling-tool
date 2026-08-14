@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for task-oriented workflow entry points (profile_data / profile_risk).
 """

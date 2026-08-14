@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for the standalone dataset exploration helpers."""
 
 import numpy as np

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """Pre-release validation for deployable modeling artifacts."""
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import joblib
 
@@ -18,16 +17,16 @@ class ReleaseCheck:
 @dataclass
 class ReleaseValidationResult:
     passed: bool
-    checks: List[ReleaseCheck]
+    checks: list[ReleaseCheck]
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "passed": self.passed,
             "checks": [asdict(check) for check in self.checks],
         }
 
 
-def _load_artifact(source: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
+def _load_artifact(source: Union[str, Path, dict[str, Any]]) -> dict[str, Any]:
     if isinstance(source, dict):
         return source
     path = Path(source)
@@ -42,15 +41,15 @@ def _load_artifact(source: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def validate_release(
-    source: Union[str, Path, Dict[str, Any]],
+    source: Union[str, Path, dict[str, Any]],
     *,
     report_path: Optional[Union[str, Path]] = None,
-    metrics: Optional[Dict[str, Any]] = None,
+    metrics: Optional[dict[str, Any]] = None,
     min_auc: Optional[float] = None,
     max_psi: Optional[float] = None,
 ) -> ReleaseValidationResult:
     """Validate artifact completeness, report contract, and metric gates."""
-    checks: List[ReleaseCheck] = []
+    checks: list[ReleaseCheck] = []
     try:
         artifact = _load_artifact(source)
         checks.append(ReleaseCheck("artifact_loadable", True, "artifact loaded"))

@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 """Frame-level helpers shared by workflow entry points."""
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import polars as pl
 
@@ -37,10 +36,10 @@ def ensure_polars(df: Any) -> pl.DataFrame:
 
 def resolve_features(
     df: pl.DataFrame,
-    features: Optional[List[str]],
-    exclude: List[Optional[str]],
+    features: Optional[list[str]],
+    exclude: list[Optional[str]],
     numeric_only: bool = False,
-) -> List[str]:
+) -> list[str]:
     """Resolve the feature list, defaulting to all (numeric) non-role columns."""
     excluded = {c for c in exclude if c}
     if features is None:
@@ -55,6 +54,6 @@ def resolve_features(
     return [c for c in features if c not in excluded]
 
 
-def group_keys_sorted(df: pl.DataFrame, group_col: str) -> List[Any]:
+def group_keys_sorted(df: pl.DataFrame, group_col: str) -> list[Any]:
     """Distinct group values in ascending order (time-like groups sort naturally)."""
     return df[group_col].unique().sort().to_list()

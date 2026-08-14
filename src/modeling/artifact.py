@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """Serializable scoring artifact helpers for raw-driver inference."""
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import joblib
 import numpy as np
 import polars as pl
 
 from ..core.exceptions import ValidationError
-
 
 ARTIFACT_VERSION = "1.0"
 
@@ -24,8 +22,8 @@ def build_scoring_artifact(
     binner: Any,
     selector: Any,
     model: Any,
-    metadata: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    metadata: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
     """Bundle every fitted transform needed for independent scoring."""
     return {
         "artifact_version": ARTIFACT_VERSION,
@@ -49,8 +47,8 @@ def build_regression_artifact(
     preprocessor: Any,
     model: Any,
     target_transform: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    metadata: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
     """Bundle a regression preprocessor, model and target transform."""
     return {
         "artifact_version": ARTIFACT_VERSION,
@@ -65,7 +63,7 @@ def build_regression_artifact(
 
 
 def score_with_artifact(
-    artifact: Dict[str, Any],
+    artifact: dict[str, Any],
     X: Union[pl.DataFrame, np.ndarray],
     *,
     return_proba: bool = False,
@@ -116,7 +114,7 @@ def score_with_artifact(
 
 
 def save_scoring_artifact(
-    artifact: Dict[str, Any],
+    artifact: dict[str, Any],
     path: Union[str, Path],
 ) -> Path:
     path = Path(path)
@@ -125,7 +123,7 @@ def save_scoring_artifact(
     return path
 
 
-def load_scoring_artifact(path: Union[str, Path]) -> Dict[str, Any]:
+def load_scoring_artifact(path: Union[str, Path]) -> dict[str, Any]:
     artifact = joblib.load(path)
     if isinstance(artifact, dict) and "scoring_artifact" in artifact:
         artifact = artifact["scoring_artifact"]

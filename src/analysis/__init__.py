@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Task-oriented workflow entry points.
 
 High-level functions take a full business table (``df, target=...``) and

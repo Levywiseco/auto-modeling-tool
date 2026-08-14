@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 """Data profiling workflow: quality snapshot before any modeling decisions."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import polars as pl
 
@@ -10,7 +9,7 @@ from ..reports import DataProfileReport
 from ._frame import NUMERIC_DTYPES, ensure_polars, group_keys_sorted, resolve_features
 
 
-def _special_mask(col: str, dtype: pl.DataType, special_values: List[Any]) -> Optional[pl.Expr]:
+def _special_mask(col: str, dtype: pl.DataType, special_values: list[Any]) -> Optional[pl.Expr]:
     """Expression matching special values, or None when not applicable."""
     if not special_values:
         return None
@@ -33,10 +32,10 @@ def _missing_expr(col: str, dtype: pl.DataType) -> pl.Expr:
 def profile_data(
     df: Any,
     *,
-    features: Optional[List[str]] = None,
+    features: Optional[list[str]] = None,
     target: Optional[str] = None,
     group_col: Optional[str] = None,
-    special_values: Optional[List[Any]] = None,
+    special_values: Optional[list[Any]] = None,
     high_missing_thr: float = 0.9,
 ) -> DataProfileReport:
     """Profile a dataset's quality and distributions before modeling.
@@ -84,7 +83,7 @@ def profile_data(
 
     # ---- overview ------------------------------------------------------
     n_numeric = sum(1 for c in feats if df.schema[c] in NUMERIC_DTYPES)
-    overview: Dict[str, Any] = {
+    overview: dict[str, Any] = {
         "n_rows": n_rows,
         "n_features": len(feats),
         "n_numeric": n_numeric,
@@ -103,7 +102,7 @@ def profile_data(
     )
 
     # ---- per-feature data quality (single pass) ------------------------
-    dq_exprs: List[pl.Expr] = []
+    dq_exprs: list[pl.Expr] = []
     for c in feats:
         dtype = df.schema[c]
         dq_exprs.append(_missing_expr(c, dtype).sum().alias(f"{c}__miss"))
@@ -168,7 +167,7 @@ def profile_data(
     stats_table = pl.DataFrame(stats_records) if stats_records else pl.DataFrame()
 
     # ---- trends over groups --------------------------------------------
-    trend_tables: Dict[str, pl.DataFrame] = {}
+    trend_tables: dict[str, pl.DataFrame] = {}
     if group_col and group_col in df.columns:
         groups = group_keys_sorted(df, group_col)
         trend_tables["row_count"] = (

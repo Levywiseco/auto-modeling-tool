@@ -1,5 +1,6 @@
-from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+
 
 class XGBoostModel:
     def __init__(self, params=None):

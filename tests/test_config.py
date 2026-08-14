@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for canonical configuration loading."""
 
 from pathlib import Path

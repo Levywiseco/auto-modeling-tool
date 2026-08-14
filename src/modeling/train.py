@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 High-performance model training module.
 
@@ -7,16 +6,15 @@ classification models with hyperparameter tuning support.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import polars as pl
 
 from ..core.base import MarsBaseEstimator
-from ..core.logger import logger
 from ..core.decorators import time_it
 from ..core.exceptions import ValidationError
-
+from ..core.logger import logger
 
 SUPPORTED_MODELS = {
     "logistic": "LogisticRegression",
@@ -31,9 +29,9 @@ SUPPORTED_MODELS = {
 class ModelTrainer(MarsBaseEstimator):
     """
     Unified model training with optional hyperparameter tuning.
-    
+
     Supports multiple classification algorithms with a consistent interface.
-    
+
     Parameters
     ----------
     model_type : str, default "logistic"
@@ -49,7 +47,7 @@ class ModelTrainer(MarsBaseEstimator):
         Random seed for reproducibility.
     n_jobs : int, default -1
         Number of parallel jobs.
-        
+
     Attributes
     ----------
     model_ : Any
@@ -58,7 +56,7 @@ class ModelTrainer(MarsBaseEstimator):
         Best hyperparameters found (if tuning enabled).
     cv_scores_ : list
         Cross-validation scores (if tuning enabled).
-        
+
     Example
     -------
     >>> trainer = ModelTrainer(model_type="logistic")
@@ -66,7 +64,7 @@ class ModelTrainer(MarsBaseEstimator):
     >>> predictions = trainer.predict(X_test)
     >>> probabilities = trainer.predict_proba(X_test)
     """
-    
+
     def __init__(
         self,
         model_type: str = "logistic",
@@ -90,16 +88,16 @@ class ModelTrainer(MarsBaseEstimator):
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.model_params = model_params
-        
+
         self.model_: Optional[Any] = None
-        self.best_params_: Dict[str, Any] = {}
-        self.cv_scores_: List[float] = []
-        self.eval_metrics_: Dict[str, Any] = {}
+        self.best_params_: dict[str, Any] = {}
+        self.cv_scores_: list[float] = []
+        self.eval_metrics_: dict[str, Any] = {}
         self.early_stopping_rounds = self.model_params.pop(
             "early_stopping_rounds", None
         )
         self._is_fitted = False
-    
+
     def _create_model(self, **params) -> Any:
         """Create a classification or regression model instance."""
         if self.task == "regression":
@@ -154,14 +152,14 @@ class ModelTrainer(MarsBaseEstimator):
                 max_iter=1000,
                 **params
             )
-        
+
         elif self.model_type == "tree":
             from sklearn.tree import DecisionTreeClassifier
             return DecisionTreeClassifier(
                 random_state=self.random_state,
                 **params
             )
-        
+
         elif self.model_type == "xgboost":
             from xgboost import XGBClassifier
             return XGBClassifier(
@@ -171,7 +169,7 @@ class ModelTrainer(MarsBaseEstimator):
                 n_jobs=self.n_jobs,
                 **params
             )
-        
+
         elif self.model_type == "random_forest":
             from sklearn.ensemble import RandomForestClassifier
             return RandomForestClassifier(
@@ -179,7 +177,7 @@ class ModelTrainer(MarsBaseEstimator):
                 n_jobs=self.n_jobs,
                 **params
             )
-        
+
         elif self.model_type == "lightgbm":
             from lightgbm import LGBMClassifier
             return LGBMClassifier(
@@ -203,7 +201,7 @@ class ModelTrainer(MarsBaseEstimator):
                 f"Supported types: {list(SUPPORTED_MODELS.keys())}"
             )
 
-    def _get_param_grid(self) -> Dict[str, List]:
+    def _get_param_grid(self) -> dict[str, list]:
         """Get default parameter grid for hyperparameter tuning."""
         if self.task == "regression":
             return {
@@ -258,7 +256,7 @@ class ModelTrainer(MarsBaseEstimator):
             },
         }
         return param_grids.get(self.model_type, {})
-    
+
     @time_it
     def fit(
         self,
@@ -276,7 +274,7 @@ class ModelTrainer(MarsBaseEstimator):
         logger.info(f"🤖 Training {self.model_type} model...")
         logger.info(f"   Training samples: {len(X)}")
 
-        fit_kwargs: Dict[str, Any] = {}
+        fit_kwargs: dict[str, Any] = {}
         if kwargs.get("sample_weight") is not None:
             fit_kwargs["sample_weight"] = np.asarray(kwargs["sample_weight"])
 
@@ -358,9 +356,9 @@ class ModelTrainer(MarsBaseEstimator):
     ) -> None:
         """Perform hyperparameter tuning using GridSearchCV."""
         from sklearn.model_selection import GridSearchCV
-        
+
         param_grid = self._get_param_grid()
-        
+
         if not param_grid:
             logger.warning(
                 f"No parameter grid defined for {self.model_type}, "
@@ -374,11 +372,11 @@ class ModelTrainer(MarsBaseEstimator):
             )
             self.model_.fit(X, y, **fit_kwargs)
             return
-        
+
         logger.info(f"   Performing hyperparameter tuning with {self.cv_folds}-fold CV...")
-        
+
         base_model = self._create_model()
-        
+
         grid_search = GridSearchCV(
             base_model,
             param_grid,
@@ -387,30 +385,30 @@ class ModelTrainer(MarsBaseEstimator):
             n_jobs=self.n_jobs,
             verbose=0,
         )
-        
+
         fit_kwargs = (
             {"sample_weight": sample_weight}
             if sample_weight is not None
             else {}
         )
         grid_search.fit(X, y, **fit_kwargs)
-        
+
         self.model_ = grid_search.best_estimator_
         self.best_params_ = grid_search.best_params_
         self.cv_scores_ = grid_search.cv_results_['mean_test_score'].tolist()
-        
+
         logger.info(f"   Best params: {self.best_params_}")
         logger.info(f"   Best CV score: {grid_search.best_score_:.4f}")
-    
+
     def predict(self, X: Union[np.ndarray, pl.DataFrame]) -> np.ndarray:
         """
         Make predictions.
-        
+
         Parameters
         ----------
         X : np.ndarray or pl.DataFrame
             Features to predict.
-            
+
         Returns
         -------
         np.ndarray
@@ -418,22 +416,22 @@ class ModelTrainer(MarsBaseEstimator):
         """
         if not self._is_fitted:
             raise ValidationError("Model not fitted. Call fit() first.")
-        
+
         if isinstance(X, pl.DataFrame):
             X = X.to_numpy()
-        
+
         X = np.nan_to_num(X, nan=0.0)
         return self.model_.predict(X)
-    
+
     def predict_proba(self, X: Union[np.ndarray, pl.DataFrame]) -> np.ndarray:
         """
         Predict class probabilities.
-        
+
         Parameters
         ----------
         X : np.ndarray or pl.DataFrame
             Features to predict.
-            
+
         Returns
         -------
         np.ndarray
@@ -443,22 +441,22 @@ class ModelTrainer(MarsBaseEstimator):
             raise ValidationError("Model not fitted. Call fit() first.")
         if self.task == "regression":
             raise ValidationError("Regression models do not expose class probabilities")
-        
+
         if isinstance(X, pl.DataFrame):
             X = X.to_numpy()
-        
+
         X = np.nan_to_num(X, nan=0.0)
         return self.model_.predict_proba(X)
-    
-    def get_feature_importance(self, feature_names: Optional[List[str]] = None) -> pl.DataFrame:
+
+    def get_feature_importance(self, feature_names: Optional[list[str]] = None) -> pl.DataFrame:
         """
         Get feature importance from trained model.
-        
+
         Parameters
         ----------
         feature_names : list of str, optional
             Feature names. If None, uses generic names.
-            
+
         Returns
         -------
         pl.DataFrame
@@ -466,7 +464,7 @@ class ModelTrainer(MarsBaseEstimator):
         """
         if not self._is_fitted:
             raise ValidationError("Model not fitted. Call fit() first.")
-        
+
         if hasattr(self.model_, 'feature_importances_'):
             importance = self.model_.feature_importances_
         elif hasattr(self.model_, 'coef_'):
@@ -477,19 +475,19 @@ class ModelTrainer(MarsBaseEstimator):
             raise ValueError(
                 f"Model {self.model_type} does not support feature importance"
             )
-        
+
         if feature_names is None:
             feature_names = [f"feature_{i}" for i in range(len(importance))]
-        
+
         return pl.DataFrame({
             "Feature": feature_names,
             "Importance": importance,
         }).sort("Importance", descending=True)
-    
-    def get_model_summary(self) -> Dict[str, Any]:
+
+    def get_model_summary(self) -> dict[str, Any]:
         """
         Get summary of trained model.
-        
+
         Returns
         -------
         dict
@@ -497,7 +495,7 @@ class ModelTrainer(MarsBaseEstimator):
         """
         if not self._is_fitted:
             raise ValidationError("Model not fitted. Call fit() first.")
-        
+
         summary = {
             "model_type": self.model_type,
             "task": self.task,
@@ -508,25 +506,25 @@ class ModelTrainer(MarsBaseEstimator):
             "early_stopping_rounds": self.early_stopping_rounds,
             "eval_metrics": self.eval_metrics_,
         }
-        
+
         if hasattr(self.model_, 'n_features_in_'):
             summary["n_features"] = self.model_.n_features_in_
-        
+
         if hasattr(self.model_, 'classes_'):
             summary["classes"] = self.model_.classes_.tolist()
-        
+
         return summary
-    
+
     def save(self, path: Union[str, Path]) -> None:
         """Save model to disk."""
         import joblib
-        
+
         if not self._is_fitted:
             raise ValidationError("Model not fitted. Call fit() first.")
-        
+
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         save_data = {
             "model": self.model_,
             "model_type": self.model_type,
@@ -537,18 +535,18 @@ class ModelTrainer(MarsBaseEstimator):
             "early_stopping_rounds": self.early_stopping_rounds,
             "eval_metrics": self.eval_metrics_,
         }
-        
+
         joblib.dump(save_data, path)
         logger.info(f"✅ Model saved to {path}")
-    
+
     @classmethod
     def load(cls, path: Union[str, Path]) -> "ModelTrainer":
         """Load model from disk."""
         import joblib
-        
+
         path = Path(path)
         data = joblib.load(path)
-        
+
         trainer = cls(
             model_type=data["model_type"],
             task=data.get("task", "classification"),
@@ -560,7 +558,7 @@ class ModelTrainer(MarsBaseEstimator):
         trainer.best_params_ = data.get("best_params", {})
         trainer.eval_metrics_ = data.get("eval_metrics", {})
         trainer._is_fitted = True
-        
+
         return trainer
 
 
@@ -573,7 +571,7 @@ def train_model(
 ) -> Any:
     """
     Quick model training function (functional API).
-    
+
     Parameters
     ----------
     X_train : np.ndarray or pl.DataFrame
@@ -584,12 +582,12 @@ def train_model(
         Type of model to train.
     **kwargs
         Additional parameters passed to ModelTrainer.
-        
+
     Returns
     -------
     Any
         Trained model instance.
-        
+
     Example
     -------
     >>> model = train_model(X_train, y_train, model_type="xgboost")
@@ -603,10 +601,10 @@ def train_model(
 def save_model(model: Any, path: Union[str, Path]) -> None:
     """Save model to disk."""
     import joblib
-    
+
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     joblib.dump(model, path)
     logger.info(f"✅ Model saved to {path}")
 
@@ -614,7 +612,7 @@ def save_model(model: Any, path: Union[str, Path]) -> None:
 def load_model(path: Union[str, Path]) -> Any:
     """Load model from disk."""
     import joblib
-    
+
     path = Path(path)
     model = joblib.load(path)
     logger.info(f"✅ Model loaded from {path}")

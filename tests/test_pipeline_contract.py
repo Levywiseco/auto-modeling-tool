@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Regression tests for the Dev/OOT and scoring contracts."""
 
 import numpy as np

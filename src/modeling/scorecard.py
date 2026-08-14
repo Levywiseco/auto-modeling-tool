@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scorecard builder module.
 
@@ -6,7 +5,7 @@ This module provides functionality to convert trained models (especially
 logistic regression) into standard credit scorecards.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import polars as pl
@@ -48,7 +47,7 @@ class ScorecardBuilder:
 
         self.model_: Any = None
         self.binner_: Any = None
-        self.feature_names_: List[str] = []
+        self.feature_names_: list[str] = []
         self.intercept_: float = 0.0
         self.coefficients_: np.ndarray = None
         self.scorecard_: pl.DataFrame = None
@@ -58,7 +57,7 @@ class ScorecardBuilder:
         self,
         model: Any,
         binner: Any,
-        feature_names: Optional[List[str]] = None,
+        feature_names: Optional[list[str]] = None,
     ) -> "ScorecardBuilder":
         """
         Fit the scorecard builder.
@@ -295,7 +294,7 @@ class ScorecardBuilder:
         self.scorecard_.write_csv(path)
         logger.info(f"✅ Scorecard saved to {path}")
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         """
         Get scorecard summary.
 
@@ -326,7 +325,7 @@ class ScorecardBuilder:
 
 
 def probability_to_credit_score(
-    probability: Union[float, np.ndarray, List[float]],
+    probability: Union[float, np.ndarray, list[float]],
     *,
     base_score: float = 500.0,
     pdo: float = 50.0,
@@ -355,7 +354,7 @@ def build_scorecard(
     model: Any,
     binner: Any,
     X: Optional[Union[pl.DataFrame, np.ndarray]] = None,
-    feature_names: Optional[List[str]] = None,
+    feature_names: Optional[list[str]] = None,
     base_score: int = 600,
     PDO: int = 20,
     target_odds: int = 20,

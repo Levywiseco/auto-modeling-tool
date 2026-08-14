@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cross-validation module for model evaluation.
 
@@ -6,7 +5,7 @@ This module provides cross-validation functionality with support for
 Stratified K-Fold, Time Series Split, and custom CV strategies.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import polars as pl
@@ -47,7 +46,7 @@ class CrossValidator:
         self,
         X: Union[np.ndarray, pl.DataFrame],
         y: Union[np.ndarray, pl.Series],
-    ) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Get train/test splits for cross-validation.
 
@@ -64,8 +63,8 @@ class CrossValidator:
             List of (X_train, X_test, y_train, y_test) tuples.
         """
         from sklearn.model_selection import (
-            StratifiedKFold,
             KFold,
+            StratifiedKFold,
             TimeSeriesSplit,
         )
 
@@ -107,7 +106,7 @@ class CrossValidator:
         y: Union[np.ndarray, pl.Series],
         scoring_func: Optional[Callable] = None,
         scoring: str = "accuracy",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Perform cross-validation.
 
@@ -198,7 +197,7 @@ def cross_validate_model(
     scoring: str = "accuracy",
     cv_strategy: str = "stratified",
     random_state: int = 42,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Quick cross-validation function.
 
@@ -249,7 +248,7 @@ def stratified_kfold_cv(
     y: Union[np.ndarray, pl.Series],
     n_splits: int = 5,
     random_state: int = 42,
-) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
     """
     Get Stratified K-Fold splits.
 
@@ -281,7 +280,7 @@ def timeseries_cv(
     X: Union[np.ndarray, pl.DataFrame],
     y: Union[np.ndarray, pl.Series],
     n_splits: int = 5,
-) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
     """
     Get Time Series Cross-Validation splits.
 

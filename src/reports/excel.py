@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Deterministic Excel audit reports for training and independent evaluation."""
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import polars as pl
 
@@ -55,11 +54,11 @@ def _append_table(sheet: Any, value: Any, *, header_font: Any) -> None:
 
 def write_model_report(
     output_dir: Union[str, Path],
-    metrics: Dict[str, Any],
+    metrics: dict[str, Any],
     *,
     feature_importance: Optional[pl.DataFrame] = None,
-    metadata: Optional[Dict[str, Any]] = None,
-    tables: Optional[Dict[str, Any]] = None,
+    metadata: Optional[dict[str, Any]] = None,
+    tables: Optional[dict[str, Any]] = None,
     filename: Optional[str] = None,
 ) -> Optional[Path]:
     """Write a stable, multi-sheet Model Report workbook.

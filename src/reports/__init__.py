@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Structured report objects returned by high-level workflow entry points.
 
 Following the "structured output first" convention: workflows return report

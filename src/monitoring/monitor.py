@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 """Monitoring orchestrator built on top of the binning pipeline."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 import polars as pl
@@ -45,7 +44,7 @@ class Monitor:
     def __init__(
         self,
         *,
-        binner_params: Optional[Dict[str, Any]] = None,
+        binner_params: Optional[dict[str, Any]] = None,
         psi_include_missing: bool = False,
         psi_include_special: bool = False,
         psi_warn: float = 0.1,
@@ -61,7 +60,7 @@ class Monitor:
         self,
         df: Any,
         *,
-        features: List[str],
+        features: list[str],
         target: Optional[str] = None,
         score_col: Optional[str] = None,
         group_col: Optional[str] = None,
@@ -107,7 +106,7 @@ class Monitor:
             )
 
         # ---- benchmark slice -------------------------------------------
-        groups: List[Any]
+        groups: list[Any]
         if group_col is not None:
             if group_col not in df.columns:
                 raise ValidationError(f"Group column '{group_col}' not found")
@@ -170,12 +169,12 @@ class Monitor:
         bench_missing = {c: bench_dists[c].get(-1, 0.0) for c in fitted}
 
         # ---- per-period distributions ----------------------------------
-        psi_rows: Dict[str, Dict[str, Any]] = {c: {"feature": c} for c in fitted}
-        miss_rows: Dict[str, Dict[str, Any]] = {c: {"feature": c} for c in fitted}
-        detail_records: List[Dict[str, Any]] = []
-        psi_last: Dict[str, float] = {}
-        psi_max: Dict[str, float] = {}
-        miss_last: Dict[str, float] = {}
+        psi_rows: dict[str, dict[str, Any]] = {c: {"feature": c} for c in fitted}
+        miss_rows: dict[str, dict[str, Any]] = {c: {"feature": c} for c in fitted}
+        detail_records: list[dict[str, Any]] = []
+        psi_last: dict[str, float] = {}
+        psi_max: dict[str, float] = {}
+        miss_last: dict[str, float] = {}
 
         for g in groups:
             part = df if group_col is None else df.filter(pl.col(group_col) == g)
@@ -210,7 +209,7 @@ class Monitor:
                         }
                     )
 
-        trend_tables: Dict[str, pl.DataFrame] = {
+        trend_tables: dict[str, pl.DataFrame] = {
             "psi": pl.DataFrame(list(psi_rows.values())),
             "missing_rate": pl.DataFrame(list(miss_rows.values())),
         }

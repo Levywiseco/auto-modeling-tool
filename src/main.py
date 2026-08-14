@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """CLI entry point for the leakage-safe auto-modeling pipeline."""
 
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from .config import config_to_pipeline_kwargs, load_pipeline_config
 from .pipelines.auto_pipeline import AutoPipeline
@@ -17,7 +16,7 @@ def run_modeling_pipeline(
     *,
     target_mode: str = "classification",
     model_type: str = "logistic",
-    model_params: Optional[Dict[str, Any]] = None,
+    model_params: Optional[dict[str, Any]] = None,
     target_transform: Optional[str] = None,
     early_stopping_eval: str = "none",
     early_stopping_rounds: Optional[int] = None,
@@ -52,7 +51,7 @@ def run_modeling_pipeline(
     min_score: float = 300.0,
     max_score: float = 900.0,
     data_encoding: str = "utf-8",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run the classification or regression pipeline selected by config."""
     common = {
         "target_col": target_col,
@@ -148,8 +147,8 @@ def run_modeling_pipeline(
 
 def run_configured_pipeline(
     config_path: str,
-    overrides: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    overrides: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
     """Run from YAML, applying only explicitly supplied CLI overrides."""
     config = load_pipeline_config(config_path)
     kwargs = config_to_pipeline_kwargs(config)
@@ -157,7 +156,7 @@ def run_configured_pipeline(
     return run_modeling_pipeline(**kwargs)
 
 
-def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
+def _cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
     values = {
         "data_path": args.input,
         "target_col": args.target,

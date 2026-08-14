@@ -1,5 +1,6 @@
 import logging
 
+
 def setup_logging(log_file='auto_modeling_tool.log'):
     logging.basicConfig(
         level=logging.INFO,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 High-performance I/O utilities using Polars.
 
@@ -7,16 +6,14 @@ models, and configuration management.
 """
 
 import json
-import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
-import polars as pl
 import joblib
+import polars as pl
 
-from ..core.logger import logger
 from ..core.decorators import time_it
-
+from ..core.logger import logger
 
 # =============================================================================
 # DataFrame I/O
@@ -32,7 +29,7 @@ def save_dataframe(
 ) -> None:
     """
     Save a Polars DataFrame to file.
-    
+
     Parameters
     ----------
     df : pl.DataFrame
@@ -44,7 +41,7 @@ def save_dataframe(
         If None, inferred from file extension.
     **kwargs
         Additional arguments passed to the writer.
-        
+
     Example
     -------
     >>> save_dataframe(df, "output.parquet")
@@ -52,12 +49,12 @@ def save_dataframe(
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     if format is None:
         format = path.suffix.lstrip('.').lower()
-    
+
     logger.info(f"💾 Saving DataFrame to {path} ({format} format)...")
-    
+
     if format == 'csv':
         df.write_csv(path, **kwargs)
     elif format == 'parquet':
@@ -68,7 +65,7 @@ def save_dataframe(
         df.write_excel(path, **kwargs)
     else:
         raise ValueError(f"Unsupported format: {format}")
-    
+
     logger.info(f"✅ Saved {df.shape[0]:,} rows × {df.shape[1]} columns")
 
 
@@ -82,7 +79,7 @@ def load_dataframe(
 ) -> Union[pl.DataFrame, pl.LazyFrame]:
     """
     Load a DataFrame from file.
-    
+
     Parameters
     ----------
     path : str or Path
@@ -94,24 +91,24 @@ def load_dataframe(
         If True, return LazyFrame for deferred execution.
     **kwargs
         Additional arguments passed to the reader.
-        
+
     Returns
     -------
     pl.DataFrame or pl.LazyFrame
         Loaded data.
-        
+
     Example
     -------
     >>> df = load_dataframe("data.parquet")
     >>> lf = load_dataframe("large_data.csv", lazy=True)
     """
     path = Path(path)
-    
+
     if format is None:
         format = path.suffix.lstrip('.').lower()
-    
+
     logger.info(f"📂 Loading DataFrame from {path}...")
-    
+
     if format == 'csv':
         df = pl.scan_csv(path, **kwargs) if lazy else pl.read_csv(path, **kwargs)
     elif format == 'parquet':
@@ -126,10 +123,10 @@ def load_dataframe(
             df = df.lazy()
     else:
         raise ValueError(f"Unsupported format: {format}")
-    
+
     if not lazy:
         logger.info(f"✅ Loaded {df.shape[0]:,} rows × {df.shape[1]} columns")
-    
+
     return df
 
 
@@ -142,11 +139,11 @@ def save_model(
     model: Any,
     path: Union[str, Path],
     *,
-    metadata: Optional[Dict] = None,
+    metadata: Optional[dict] = None,
 ) -> None:
     """
     Save a model to disk using joblib.
-    
+
     Parameters
     ----------
     model : Any
@@ -155,42 +152,42 @@ def save_model(
         Output file path.
     metadata : dict, optional
         Additional metadata to save with the model.
-        
+
     Example
     -------
     >>> save_model(model, "model.pkl", metadata={"version": "1.0"})
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     logger.info(f"💾 Saving model to {path}...")
-    
+
     save_obj = {
         "model": model,
         "metadata": metadata or {}
     }
-    
+
     joblib.dump(save_obj, path)
-    
-    logger.info(f"✅ Model saved successfully")
+
+    logger.info("✅ Model saved successfully")
 
 
 @time_it
-def load_model(path: Union[str, Path]) -> Dict[str, Any]:
+def load_model(path: Union[str, Path]) -> dict[str, Any]:
     """
     Load a model from disk.
-    
+
     Parameters
     ----------
     path : str or Path
         Path to the saved model.
-        
+
     Returns
     -------
     dict
         Dictionary with 'model' and 'metadata' keys.
         If legacy format (model only), returns dict with model.
-        
+
     Example
     -------
     >>> result = load_model("model.pkl")
@@ -199,14 +196,14 @@ def load_model(path: Union[str, Path]) -> Dict[str, Any]:
     """
     path = Path(path)
     logger.info(f"📂 Loading model from {path}...")
-    
+
     result = joblib.load(path)
-    
+
     # Handle legacy format (model only, not wrapped in dict)
     if not isinstance(result, dict) or "model" not in result:
         result = {"model": result, "metadata": {}}
-    
-    logger.info(f"✅ Model loaded successfully")
+
+    logger.info("✅ Model loaded successfully")
     return result
 
 
@@ -215,12 +212,12 @@ def load_model(path: Union[str, Path]) -> Dict[str, Any]:
 # =============================================================================
 
 def save_config(
-    config: Dict,
+    config: dict,
     path: Union[str, Path],
 ) -> None:
     """
     Save configuration to JSON file.
-    
+
     Parameters
     ----------
     config : dict
@@ -230,32 +227,32 @@ def save_config(
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
-    
+
     logger.info(f"✅ Config saved to {path}")
 
 
-def load_config(path: Union[str, Path]) -> Dict:
+def load_config(path: Union[str, Path]) -> dict:
     """
     Load configuration from JSON file.
-    
+
     Parameters
     ----------
     path : str or Path
         Path to JSON config file.
-        
+
     Returns
     -------
     dict
         Configuration dictionary.
     """
     path = Path(path)
-    
-    with open(path, 'r', encoding='utf-8') as f:
+
+    with open(path, encoding='utf-8') as f:
         config = json.load(f)
-    
+
     logger.info(f"✅ Config loaded from {path}")
     return config
 
@@ -265,12 +262,12 @@ def load_config(path: Union[str, Path]) -> Dict:
 # =============================================================================
 
 def save_binning(
-    bin_edges: Dict[str, List[float]],
+    bin_edges: dict[str, list[float]],
     path: Union[str, Path],
 ) -> None:
     """
     Save binning edges to JSON.
-    
+
     Parameters
     ----------
     bin_edges : dict
@@ -281,15 +278,15 @@ def save_binning(
     save_config(bin_edges, path)
 
 
-def load_binning(path: Union[str, Path]) -> Dict[str, List[float]]:
+def load_binning(path: Union[str, Path]) -> dict[str, list[float]]:
     """
     Load binning edges from JSON.
-    
+
     Parameters
     ----------
     path : str or Path
         Path to binning JSON file.
-        
+
     Returns
     -------
     dict
@@ -299,12 +296,12 @@ def load_binning(path: Union[str, Path]) -> Dict[str, List[float]]:
 
 
 def save_woe_mapping(
-    woe_mapping: Dict[str, Dict],
+    woe_mapping: dict[str, dict],
     path: Union[str, Path],
 ) -> None:
     """
     Save WOE mapping to JSON.
-    
+
     Parameters
     ----------
     woe_mapping : dict
@@ -315,15 +312,15 @@ def save_woe_mapping(
     save_config(woe_mapping, path)
 
 
-def load_woe_mapping(path: Union[str, Path]) -> Dict[str, Dict]:
+def load_woe_mapping(path: Union[str, Path]) -> dict[str, dict]:
     """
     Load WOE mapping from JSON.
-    
+
     Parameters
     ----------
     path : str or Path
         Path to WOE mapping file.
-        
+
     Returns
     -------
     dict
@@ -339,7 +336,7 @@ def load_woe_mapping(path: Union[str, Path]) -> Dict[str, Dict]:
 @time_it
 def generate_model_report(
     model: Any,
-    metrics: Dict[str, float],
+    metrics: dict[str, float],
     feature_importance: pl.DataFrame,
     output_dir: Union[str, Path],
     *,
@@ -347,7 +344,7 @@ def generate_model_report(
 ) -> Path:
     """
     Generate a comprehensive model report.
-    
+
     Parameters
     ----------
     model : Any
@@ -360,7 +357,7 @@ def generate_model_report(
         Output directory.
     report_name : str, default "model_report"
         Report filename (without extension).
-        
+
     Returns
     -------
     Path
@@ -368,18 +365,18 @@ def generate_model_report(
     """
     output_dir = Path(output_dir) / report_name
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     logger.info(f"📝 Generating model report in {output_dir}...")
-    
+
     # Save model
     save_model(model, output_dir / "model.pkl", metadata={"metrics": metrics})
-    
+
     # Save metrics
     save_config(metrics, output_dir / "metrics.json")
-    
+
     # Save feature importance
     save_dataframe(feature_importance, output_dir / "feature_importance.csv")
-    
+
     # Generate summary
     summary = {
         "model_type": type(model).__name__,
@@ -390,21 +387,21 @@ def generate_model_report(
         }
     }
     save_config(summary, output_dir / "summary.json")
-    
+
     logger.info(f"✅ Report generated with {len(list(output_dir.iterdir()))} files")
-    
+
     return output_dir
 
 
 def list_saved_models(directory: Union[str, Path]) -> pl.DataFrame:
     """
     List all saved models in a directory.
-    
+
     Parameters
     ----------
     directory : str or Path
         Directory to search for models.
-        
+
     Returns
     -------
     pl.DataFrame
@@ -412,11 +409,11 @@ def list_saved_models(directory: Union[str, Path]) -> pl.DataFrame:
     """
     directory = Path(directory)
     models = []
-    
+
     for pkl_file in directory.rglob("*.pkl"):
         try:
             data = joblib.load(pkl_file)
-            
+
             models.append({
                 "path": str(pkl_file),
                 "model_type": type(data.get("model")).__name__ if isinstance(data, dict) and "model" in data else type(data).__name__,
@@ -425,5 +422,5 @@ def list_saved_models(directory: Union[str, Path]) -> pl.DataFrame:
             })
         except Exception as e:
             logger.warning(f"Could not load {pkl_file}: {e}")
-    
+
     return pl.DataFrame(models)

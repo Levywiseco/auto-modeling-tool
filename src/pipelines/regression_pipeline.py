@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Leakage-safe regression pipeline for continuous targets."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import joblib
 import numpy as np
@@ -19,7 +18,6 @@ from ..modeling.artifact import (
     score_with_artifact,
 )
 from ..modeling.train import ModelTrainer
-
 
 NUMERIC_DTYPES = {
     pl.Int8,
@@ -50,7 +48,7 @@ class RegressionPipeline:
         dev_label: Any = "dev",
         oot_label: Any = "oot",
         target_transform: Optional[str] = None,
-        model_params: Optional[Dict[str, Any]] = None,
+        model_params: Optional[dict[str, Any]] = None,
         early_stopping_eval: str = "none",
         early_stopping_rounds: Optional[int] = None,
         early_stopping_metric: Optional[str] = None,
@@ -78,8 +76,8 @@ class RegressionPipeline:
 
         self.preprocessor_: Optional[DataPreprocessor] = None
         self.model_: Optional[ModelTrainer] = None
-        self.metrics_: Optional[Dict[str, float]] = None
-        self.feature_columns_: List[str] = []
+        self.metrics_: Optional[dict[str, float]] = None
+        self.feature_columns_: list[str] = []
         self.split_: Optional[DatasetSplit] = None
         self._X_oot_raw: Optional[pl.DataFrame] = None
         self._y_oot: Optional[pl.Series] = None
@@ -258,7 +256,7 @@ class RegressionPipeline:
         self,
         X_oot: Optional[pl.DataFrame] = None,
         y_oot: Optional[pl.Series] = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         X_oot = self._X_oot_raw if X_oot is None else X_oot
         y_oot = self._y_oot if y_oot is None else y_oot
         if X_oot is None or y_oot is None:
@@ -275,7 +273,7 @@ class RegressionPipeline:
         artifact = self.get_scoring_artifact()
         return score_with_artifact(artifact, X)
 
-    def get_scoring_artifact(self) -> Dict[str, Any]:
+    def get_scoring_artifact(self) -> dict[str, Any]:
         if self.model_ is None or self.preprocessor_ is None:
             raise ValidationError("Pipeline not fitted. Call fit() first.")
         return build_regression_artifact(
@@ -361,7 +359,7 @@ def run_regression_pipeline(
     target_col: str,
     output_dir: Union[str, Path] = "output",
     **kwargs,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     pipeline = RegressionPipeline(target_col=target_col, **kwargs)
     pipeline.fit(data_path, **kwargs)
     metrics = pipeline.evaluate()

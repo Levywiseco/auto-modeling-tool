@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Regression task and raw-driver scoring tests."""
 
 from pathlib import Path

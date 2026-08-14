@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """Canonical YAML configuration loading for the modeling pipeline."""
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Optional, Union
 
 
-def _first(mapping: Dict[str, Any], keys: Iterable[str], default: Any = None) -> Any:
+def _first(mapping: dict[str, Any], keys: Iterable[str], default: Any = None) -> Any:
     for key in keys:
         value = mapping.get(key)
         if value is not None:
@@ -22,7 +22,7 @@ def _resolve_path(value: Any, config_path: Optional[Path]) -> Any:
     return str((config_path.parent / path).resolve())
 
 
-def load_pipeline_config(path: Union[str, Path]) -> Dict[str, Any]:
+def load_pipeline_config(path: Union[str, Path]) -> dict[str, Any]:
     """Load a YAML config and normalize the legacy default_config wrapper."""
     try:
         import yaml
@@ -42,7 +42,7 @@ def load_pipeline_config(path: Union[str, Path]) -> Dict[str, Any]:
     return config
 
 
-def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
+def config_to_pipeline_kwargs(config: dict[str, Any]) -> dict[str, Any]:
     """Map the canonical schema and supported legacy aliases to CLI kwargs."""
     config_path = (
         Path(config["_config_path"])

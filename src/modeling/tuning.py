@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 High-performance hyperparameter tuning module.
 
@@ -6,7 +5,7 @@ This module provides functions for hyperparameter tuning using
 GridSearchCV and RandomizedSearchCV.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 
@@ -17,14 +16,14 @@ from ..core.logger import logger
 @time_it
 def tune_hyperparameters(
     model: Any,
-    param_grid: Dict[str, List[Any]],
+    param_grid: dict[str, list[Any]],
     X_train: Union[np.ndarray, Any],
     y_train: Union[np.ndarray, Any],
     scoring: str = "accuracy",
     cv: int = 5,
     n_jobs: int = -1,
     verbose: int = 0,
-) -> Tuple[Any, Dict[str, Any], float]:
+) -> tuple[Any, dict[str, Any], float]:
     """
     Tune hyperparameters using GridSearchCV.
 
@@ -86,7 +85,7 @@ def tune_hyperparameters(
 @time_it
 def random_search_hyperparameters(
     model: Any,
-    param_distributions: Dict[str, Any],
+    param_distributions: dict[str, Any],
     X_train: Union[np.ndarray, Any],
     y_train: Union[np.ndarray, Any],
     scoring: str = "accuracy",
@@ -95,7 +94,7 @@ def random_search_hyperparameters(
     n_jobs: int = -1,
     verbose: int = 0,
     random_state: Optional[int] = 42,
-) -> Tuple[Any, Dict[str, Any], float]:
+) -> tuple[Any, dict[str, Any], float]:
     """
     Tune hyperparameters using RandomizedSearchCV.
 
@@ -168,15 +167,15 @@ def tune_model(
     X_train: Union[np.ndarray, Any],
     y_train: Union[np.ndarray, Any],
     tuning_method: str = "grid",
-    param_grid: Optional[Dict[str, List[Any]]] = None,
-    param_distributions: Optional[Dict[str, Any]] = None,
+    param_grid: Optional[dict[str, list[Any]]] = None,
+    param_distributions: Optional[dict[str, Any]] = None,
     scoring: str = "accuracy",
     cv: int = 5,
     n_iter: int = 100,
     n_jobs: int = -1,
     verbose: int = 0,
     random_state: Optional[int] = 42,
-) -> Tuple[Any, Dict[str, Any], float]:
+) -> tuple[Any, dict[str, Any], float]:
     """
     Unified hyperparameter tuning interface.
 
@@ -243,7 +242,7 @@ def tune_model(
 
 
 # Default parameter grids for common models
-DEFAULT_PARAM_GRIDS: Dict[str, Dict[str, List[Any]]] = {
+DEFAULT_PARAM_GRIDS: dict[str, dict[str, list[Any]]] = {
     "logistic": {
         "C": [0.001, 0.01, 0.1, 1.0, 10.0],
         "solver": ["lbfgs", "liblinear"],
@@ -288,7 +287,7 @@ DEFAULT_PARAM_GRIDS: Dict[str, Dict[str, List[Any]]] = {
 }
 
 
-def get_default_param_grid(model_type: str) -> Optional[Dict[str, List[Any]]]:
+def get_default_param_grid(model_type: str) -> Optional[dict[str, list[Any]]]:
     """
     Get default parameter grid for a model type.
 
