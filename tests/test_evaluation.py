@@ -169,3 +169,15 @@ def test_metrics_handle_one_class_evaluation_slice():
     )
     assert metrics["auc_roc"] == 0.5
     assert metrics["ks_statistic"] == 0.0
+
+
+def test_calculate_lift_handles_duplicate_scores():
+    from src.evaluation.metrics import calculate_lift
+
+    table = calculate_lift(
+        [0, 1, 0, 1],
+        [0.5, 0.5, 0.5, 0.5],
+        n_bins=10,
+    )
+    assert isinstance(table, pl.DataFrame)
+    assert len(table) == 1
