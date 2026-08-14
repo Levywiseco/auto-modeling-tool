@@ -1,0 +1,259 @@
+# -*- coding: utf-8 -*-
+"""Leakage-safe regression pipeline for continuous targets."""
+
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import joblib
+import numpy as np
+import polars as pl
+
+from ..core.exceptions import ValidationError
+from ..data.loaders import load_data
+from ..data.preprocess import DataPreprocessor
+from ..data.split import DatasetSplit, split_dev_oot
+from ..evaluation.metrics import calculate_regression_metrics
+from ..modeling.artifact import (
+    build_regression_artifact,
+    score_with_artifact,
+)
+from ..modeling.train import ModelTrainer
+
+
+NUMERIC_DTYPES = {
+    pl.Int8,
+    pl.Int16,
+    pl.Int32,
+    pl.Int64,
+    pl.UInt8,
+    pl.UInt16,
+    pl.UInt32,
+    pl.UInt64,
+    pl.Float32,
+    pl.Float64,
+}
+
+
+class RegressionPipeline:
+    """Dev/OOT regression pipeline with optional log1p target transformation."""
+
+    def __init__(
+        self,
+        target_col: str,
+        model_type: str = "xgboost",
+        test_size: float = 0.2,
+        random_state: int = 42,
+        sample_col: Optional[str] = None,
+        date_column: Optional[str] = None,
+        oot_start: Optional[Any] = None,
+        dev_label: Any = "dev",
+        oot_label: Any = "oot",
+        target_transform: Optional[str] = None,
+        clean_strategy: str = "median",
+        normalize_method: Optional[str] = "zscore",
+    ):
+        self.target_col = target_col
+        self.model_type = model_type
+        self.test_size = test_size
+        self.random_state = random_state
+        self.sample_col = sample_col
+        self.date_column = date_column
+        self.oot_start = oot_start
+        self.dev_label = dev_label
+        self.oot_label = oot_label
+        self.target_transform = target_transform
+        self.clean_strategy = clean_strategy
+        self.normalize_method = normalize_method
+
+        self.preprocessor_: Optional[DataPreprocessor] = None
+        self.model_: Optional[ModelTrainer] = None
+        self.metrics_: Optional[Dict[str, float]] = None
+        self.feature_columns_: List[str] = []
+        self.split_: Optional[DatasetSplit] = None
+        self._X_oot_raw: Optional[pl.DataFrame] = None
+        self._y_oot: Optional[pl.Series] = None
+
+    def fit(self, data: Union[str, Path, pl.DataFrame], **kwargs) -> "RegressionPipeline":
+        if isinstance(data, (str, Path)):
+            load_kwargs = {}
+            if kwargs.get("encoding") and Path(data).suffix.lower() == ".csv":
+                load_kwargs["encoding"] = kwargs["encoding"]
+            df = load_data(data, **load_kwargs)
+        else:
+            df = data
+        if isinstance(df, pl.LazyFrame):
+            df = df.collect()
+        if self.target_col not in df.columns:
+            raise ValidationError(f"Target column '{self.target_col}' not found in data")
+
+        sample_col = kwargs.get("sample_col", self.sample_col)
+        date_column = kwargs.get("date_column", self.date_column)
+        self.split_ = split_dev_oot(
+            df,
+            self.target_col,
+            sample_column=sample_col,
+            dev_label=kwargs.get("dev_label", self.dev_label),
+            oot_label=kwargs.get("oot_label", self.oot_label),
+            date_column=date_column,
+            oot_start=kwargs.get("oot_start", self.oot_start),
+            test_size=self.test_size,
+            random_state=self.random_state,
+        )
+        dev, oot = self.split_.dev, self.split_.oot
+        weight_col = kwargs.get("weight_col")
+        role_columns = {self.target_col, sample_col, date_column, weight_col}
+        requested = kwargs.get("feature_columns")
+        excluded = set(kwargs.get("exclude_columns", []))
+        if requested is None:
+            self.feature_columns_ = [
+                column
+                for column in dev.columns
+                if column not in role_columns
+                and column not in excluded
+                and dev[column].dtype in NUMERIC_DTYPES
+            ]
+        else:
+            self.feature_columns_ = list(requested)
+        if not self.feature_columns_:
+            raise ValidationError("Regression requires at least one numeric feature")
+        non_numeric = [
+            column for column in self.feature_columns_
+            if dev[column].dtype not in NUMERIC_DTYPES
+        ]
+        if non_numeric:
+            raise ValidationError(
+                f"Regression features must be numeric; got {non_numeric}"
+            )
+
+        X_dev_raw = dev.select(self.feature_columns_)
+        X_oot_raw = oot.select(self.feature_columns_)
+        y_dev = dev.get_column(self.target_col).cast(pl.Float64)
+        self._X_oot_raw = X_oot_raw
+        self._y_oot = oot.get_column(self.target_col).cast(pl.Float64)
+
+        target_transform = kwargs.get("target_transform", self.target_transform)
+        if target_transform not in {None, "log1p"}:
+            raise ValidationError("target_transform must be null or 'log1p'")
+        y_fit = y_dev.to_numpy()
+        if target_transform == "log1p":
+            if np.nanmin(y_fit) < 0:
+                raise ValidationError("log1p target transform requires non-negative targets")
+            y_fit = np.log1p(y_fit)
+
+        self.preprocessor_ = DataPreprocessor(
+            clean_strategy=kwargs.get("clean_strategy", self.clean_strategy),
+            normalize_method=kwargs.get("normalize_method", self.normalize_method),
+            custom_null_values=kwargs.get("custom_null_values"),
+        )
+        self.preprocessor_.fit(X_dev_raw)
+        X_dev = self.preprocessor_.transform(X_dev_raw)
+
+        sample_weight = None
+        if weight_col:
+            sample_weight = dev.get_column(weight_col).cast(pl.Float64).to_numpy()
+            if not np.isfinite(sample_weight).all() or (sample_weight <= 0).any():
+                raise ValidationError("Sample weights must be finite and strictly positive")
+
+        self.model_ = ModelTrainer(
+            model_type=self.model_type,
+            task="regression",
+            random_state=self.random_state,
+        )
+        self.model_.fit(X_dev, y_fit, sample_weight=sample_weight)
+        self.target_transform = target_transform
+        return self
+
+    def _predict_raw(self, X: pl.DataFrame) -> np.ndarray:
+        if self.model_ is None or self.preprocessor_ is None:
+            raise ValidationError("Pipeline not fitted. Call fit() first.")
+        missing = [column for column in self.feature_columns_ if column not in X.columns]
+        if missing:
+            raise ValidationError(f"Input data is missing driver columns: {missing}")
+        transformed = self.preprocessor_.transform(X.select(self.feature_columns_))
+        predictions = self.model_.predict(transformed)
+        if self.target_transform == "log1p":
+            predictions = np.expm1(predictions)
+        return np.asarray(predictions)
+
+    def evaluate(
+        self,
+        X_oot: Optional[pl.DataFrame] = None,
+        y_oot: Optional[pl.Series] = None,
+    ) -> Dict[str, float]:
+        X_oot = self._X_oot_raw if X_oot is None else X_oot
+        y_oot = self._y_oot if y_oot is None else y_oot
+        if X_oot is None or y_oot is None:
+            raise ValidationError("No OOT data is available for evaluation")
+        predictions = self._predict_raw(X_oot)
+        self.metrics_ = calculate_regression_metrics(y_oot, predictions)
+        return self.metrics_
+
+    def predict(self, X: pl.DataFrame) -> np.ndarray:
+        artifact = self.get_scoring_artifact()
+        return score_with_artifact(artifact, X)
+
+    def get_scoring_artifact(self) -> Dict[str, Any]:
+        if self.model_ is None or self.preprocessor_ is None:
+            raise ValidationError("Pipeline not fitted. Call fit() first.")
+        return build_regression_artifact(
+            target_col=self.target_col,
+            feature_columns=self.feature_columns_,
+            preprocessor=self.preprocessor_,
+            model=self.model_,
+            target_transform=self.target_transform,
+            metadata={
+                "split_strategy": self.split_.strategy if self.split_ else None,
+                "random_state": self.random_state,
+            },
+        )
+
+    def save(self, output_dir: Union[str, Path]) -> Path:
+        if self.model_ is None:
+            raise ValidationError("Pipeline not fitted. Call fit() first.")
+        output = Path(output_dir)
+        output.mkdir(parents=True, exist_ok=True)
+        artifact = self.get_scoring_artifact()
+        joblib.dump(
+            {
+                "artifact_version": "1.0",
+                "target_col": self.target_col,
+                "model_type": self.model_type,
+                "feature_columns": self.feature_columns_,
+                "preprocessor": self.preprocessor_,
+                "model": self.model_,
+                "target_transform": self.target_transform,
+                "metrics": self.metrics_,
+                "scoring_artifact": artifact,
+            },
+            output / "pipeline.pkl",
+        )
+        joblib.dump(artifact, output / "scoring_artifact.pkl")
+        return output
+
+    @classmethod
+    def load(cls, path: Union[str, Path]) -> "RegressionPipeline":
+        path = Path(path)
+        data = joblib.load(path / "pipeline.pkl" if path.is_dir() else path)
+        pipeline = cls(
+            target_col=data["target_col"],
+            model_type=data.get("model_type", "xgboost"),
+            target_transform=data.get("target_transform"),
+        )
+        pipeline.feature_columns_ = data["feature_columns"]
+        pipeline.preprocessor_ = data["preprocessor"]
+        pipeline.model_ = data["model"]
+        pipeline.metrics_ = data.get("metrics")
+        return pipeline
+
+
+def run_regression_pipeline(
+    data_path: Union[str, Path],
+    target_col: str,
+    output_dir: Union[str, Path] = "output",
+    **kwargs,
+) -> Dict[str, Any]:
+    pipeline = RegressionPipeline(target_col=target_col, **kwargs)
+    pipeline.fit(data_path, **kwargs)
+    metrics = pipeline.evaluate()
+    pipeline.save(output_dir)
+    return {"pipeline": pipeline, "metrics": metrics, "output_path": Path(output_dir)}
