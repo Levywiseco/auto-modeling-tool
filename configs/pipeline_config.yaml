@@ -1,0 +1,34 @@
+# Canonical configuration for the leakage-safe classification pipeline.
+# Paths are resolved relative to this file.
+
+shared:
+  target_mode: classification
+  bad_col: target
+  sample_col: sample
+  dev_label: dev
+  oot_label: oot
+  random_state: 42
+
+data:
+  path: data/dataset.csv
+  encoding: utf8
+
+output:
+  dir: output
+
+preprocess:
+  clean_strategy: median
+  normalize_method: zscore
+
+binning:
+  n_bins: 10
+  method: quantile
+  min_samples_bin: 50
+  monotonic: false
+
+feature_screening:
+  method: iv
+  n_features: 20
+
+modeling:
+  algorithm: logistic
