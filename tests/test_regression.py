@@ -52,3 +52,24 @@ def test_regression_pipeline_log1p_artifact_roundtrip(tmp_path: Path):
     artifact = load_scoring_artifact(path / "scoring_artifact.pkl")
     from_artifact = score_with_artifact(artifact, data.select(["x"]))
     assert np.allclose(with_artifact, from_artifact)
+
+
+def test_regression_release_gate_discovers_report(tmp_path: Path):
+    x = np.arange(30, dtype=float)
+    target = 1.5 + 0.2 * x
+    sample = np.array(["dev"] * 20 + ["oot"] * 10)
+    data = pl.DataFrame({"x": x, "target": target, "sample": sample})
+
+    pipeline = RegressionPipeline(
+        target_col="target",
+        model_type="linear",
+        normalize_method=None,
+    )
+    pipeline.fit(data, sample_col="sample")
+    pipeline.evaluate()
+    pipeline.save(tmp_path)
+
+    from src.evaluation.quality_gate import validate_release
+
+    result = validate_release(tmp_path)
+    assert result.passed
