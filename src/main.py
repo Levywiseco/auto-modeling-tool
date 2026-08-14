@@ -196,8 +196,6 @@ def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
         "base_score": args.base_score,
         "pdo": args.pdo,
         "min_score": args.min_score,
-        "pdo": args.pdo,
-        "min_score": args.min_score,
         "max_score": args.max_score,
     }
     return {key: value for key, value in values.items() if value is not None}
