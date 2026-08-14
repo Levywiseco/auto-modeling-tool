@@ -394,6 +394,18 @@ class AutoPipeline:
                 feature_importance=self.feature_importance_,
                 output_dir=output_path,
             )
+        from ..reports.excel import write_model_report
+        write_model_report(
+            output_path,
+            self.metrics_ or {},
+            feature_importance=self.feature_importance_,
+            metadata={
+                "target_col": self.target_col,
+                "artifact_version": "1.0",
+                "split_strategy": self.split_.strategy if self.split_ else None,
+                "selected_features": self.selected_features_,
+            },
+        )
         logger.info(f"Pipeline saved to {output_path}")
         return output_path
 
