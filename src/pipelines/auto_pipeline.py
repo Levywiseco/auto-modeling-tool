@@ -301,25 +301,7 @@ class AutoPipeline:
         self.metrics_ = calculate_all_metrics(y_test_np, y_pred, y_prob)
         return self.metrics_
 
-    def predict(
-        self,
-        X: pl.DataFrame,
-        return_proba: bool = False
-    ) -> Union[np.ndarray, tuple]:
-        """
-        Make predictions on new data.
-        
-        Parameters
-        ----------
-        X : pl.DataFrame
-            Input features.
-        return_proba : bool, default False
-            If True, return probabilities instead of class labels.
-            
-        Returns
-        -------
-        np.ndarray or tuple
-            Predictions (and probabilities if retu    def _transform_selected(self, X: pl.DataFrame) -> pl.DataFrame:
+    def _transform_selected(self, X: pl.DataFrame) -> pl.DataFrame:
         if self.model_ is None or self.preprocessor_ is None:
             raise ValidationError("Pipeline not fitted. Call fit() first.")
         missing = [column for column in self.feature_columns_ if column not in X.columns]
