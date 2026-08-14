@@ -97,6 +97,7 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
 
     kwargs = {
         "data_path": _resolve_path(data_path, config_path),
+        "data_encoding": data.get("encoding", "utf-8"),
         "target_col": target_col,
         "output_dir": _resolve_path(output_dir, config_path),
         "test_size": float(test_size if test_size is not None else 0.2),
