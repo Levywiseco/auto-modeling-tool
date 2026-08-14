@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Model calibration module.
 
@@ -6,13 +5,23 @@ This module provides probability calibration functionality using
 Platt Scaling (Sigmoid) and Isotonic Regression.
 """
 
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import polars as pl
 
 from ..core.decorators import time_it
 from ..core.logger import logger
+
+
+def _as_proba_array(y_prob: Union[np.ndarray, pl.DataFrame, pl.Series]) -> np.ndarray:
+    """Normalize probabilities to a 1-D NumPy array of positive-class scores."""
+    if isinstance(y_prob, (pl.DataFrame, pl.Series)):
+        y_prob = y_prob.to_numpy()
+    y_prob = np.asarray(y_prob)
+    if y_prob.ndim == 2:
+        y_prob = y_prob[:, 1] if y_prob.shape[1] == 2 else y_prob.ravel()
+    return y_prob
 
 
 class ProbabilityCalibrator:
@@ -36,7 +45,7 @@ class ProbabilityCalibrator:
     def fit(
         self,
         y_true: Union[np.ndarray, pl.Series],
-        y_prob: Union[np.ndarray, pl.DataFrame],
+        y_prob: Union[np.ndarray, pl.DataFrame, pl.Series],
     ) -> "ProbabilityCalibrator":
         """
         Fit the calibrator.
@@ -45,7 +54,7 @@ class ProbabilityCalibrator:
         ----------
         y_true : np.ndarray or pl.Series
             True labels.
-        y_prob : np.ndarray or pl.DataFrame
+        y_prob : np.ndarray, pl.DataFrame or pl.Series
             Predicted probabilities (positive class).
 
         Returns
@@ -55,49 +64,35 @@ class ProbabilityCalibrator:
         """
         if isinstance(y_true, pl.Series):
             y_true = y_true.to_numpy()
-        if isinstance(y_prob, pl.DataFrame):
-            y_prob = y_prob.to_numpy()
-        if y_prob.ndim == 2:
-            y_prob = y_prob[:, 1]
+        y_true = np.asarray(y_true)
+        y_prob = _as_proba_array(y_prob)
 
+        if y_prob.shape[0] != y_true.shape[0]:
+            raise ValueError(
+                f"y_true and y_prob must have the same length, "
+                f"got {y_true.shape[0]} and {y_prob.shape[0]}"
+            )
+
+        # Calibration fits a 1-D mapping from an existing score to a corrected
+        # probability. CalibratedClassifierCV is deliberately NOT used here: it
+        # wraps and refits a classifier, and cannot consume precomputed scores.
         if self.method == "sigmoid":
-            from sklearn.calibration import CalibratedClassifierCV
             from sklearn.linear_model import LogisticRegression
 
-            self.calibrator_ = CalibratedClassifierCV(
-                method="sigmoid",
-                estimator=LogisticRegression(solver="lbfgs", max_iter=1000),
-                cv=5,
-            )
+            # Platt scaling: logistic regression on the raw score.
+            self.calibrator_ = LogisticRegression(solver="lbfgs", max_iter=1000)
+            self.calibrator_.fit(y_prob.reshape(-1, 1), y_true)
         elif self.method == "isotonic":
-            from sklearn.calibration import CalibratedClassifierCV
+            from sklearn.isotonic import IsotonicRegression
 
-            self.calibrator_ = CalibratedClassifierCV(
-                method="isotonic",
-                cv=5,
+            self.calibrator_ = IsotonicRegression(
+                y_min=0.0, y_max=1.0, out_of_bounds="clip"
             )
+            self.calibrator_.fit(y_prob, y_true)
         else:
-            raise ValueError(f"Unknown method: {self.method}")
-
-        # Create a dummy classifier for calibration
-        from sklearn.base import BaseEstimator, ClassifierMixin
-
-        class DummyClassifier(BaseEstimator, ClassifierMixin):
-            def __init__(self):
-                self.classes_ = np.unique(y_true)
-
-            def fit(self, X, y):
-                return self
-
-            def predict(self, X):
-                return np.zeros(len(X))
-
-            def predict_proba(self, X):
-                return np.column_stack([1 - y_prob, y_prob])
-
-        dummy = DummyClassifier()
-        self.calibrator_.estimator = dummy
-        self.calibrator_.fit(y_prob.reshape(-1, 1), y_true)
+            raise ValueError(
+                f"Unknown method: {self.method}. Use 'sigmoid' or 'isotonic'."
+            )
 
         self._is_fitted = True
         logger.info(f"✅ {self.method.capitalize()} calibrator fitted")
@@ -106,14 +101,14 @@ class ProbabilityCalibrator:
 
     def transform(
         self,
-        y_prob: Union[np.ndarray, pl.DataFrame],
+        y_prob: Union[np.ndarray, pl.DataFrame, pl.Series],
     ) -> np.ndarray:
         """
         Transform probabilities using fitted calibrator.
 
         Parameters
         ----------
-        y_prob : np.ndarray or pl.DataFrame
+        y_prob : np.ndarray, pl.DataFrame or pl.Series
             Predicted probabilities.
 
         Returns
@@ -124,17 +119,16 @@ class ProbabilityCalibrator:
         if not self._is_fitted:
             raise RuntimeError("Calibrator not fitted. Call fit() first.")
 
-        if isinstance(y_prob, pl.DataFrame):
-            y_prob = y_prob.to_numpy()
-        if y_prob.ndim == 2:
-            y_prob = y_prob[:, 1]
+        y_prob = _as_proba_array(y_prob)
 
-        return self.calibrator_.predict_proba(y_prob.reshape(-1, 1))[:, 1]
+        if self.method == "sigmoid":
+            return self.calibrator_.predict_proba(y_prob.reshape(-1, 1))[:, 1]
+        return np.asarray(self.calibrator_.predict(y_prob))
 
     def fit_transform(
         self,
         y_true: Union[np.ndarray, pl.Series],
-        y_prob: Union[np.ndarray, pl.DataFrame],
+        y_prob: Union[np.ndarray, pl.DataFrame, pl.Series],
     ) -> np.ndarray:
         """
         Fit and transform in one step.
@@ -143,7 +137,7 @@ class ProbabilityCalibrator:
         ----------
         y_true : np.ndarray or pl.Series
             True labels.
-        y_prob : np.ndarray or pl.DataFrame
+        y_prob : np.ndarray, pl.DataFrame or pl.Series
             Predicted probabilities.
 
         Returns
@@ -156,7 +150,7 @@ class ProbabilityCalibrator:
 
 def calibrate_probabilities(
     y_true: Union[np.ndarray, pl.Series],
-    y_prob: Union[np.ndarray, pl.DataFrame],
+    y_prob: Union[np.ndarray, pl.DataFrame, pl.Series],
     method: str = "sigmoid",
 ) -> np.ndarray:
     """
@@ -166,7 +160,7 @@ def calibrate_probabilities(
     ----------
     y_true : np.ndarray or pl.Series
         True labels.
-    y_prob : np.ndarray or pl.DataFrame
+    y_prob : np.ndarray, pl.DataFrame or pl.Series
         Predicted probabilities (positive class).
     method : str, default "sigmoid"
         Calibration method: 'sigmoid' (Platt Scaling) or 'isotonic'.
