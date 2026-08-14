@@ -26,7 +26,7 @@ jobs:
       - name: Lint
         run: python -m ruff check auto_modeling_tool scripts tests
       - name: Compile source and tests
-        run: python -m compileall -q **auto_modeling_tool** scripts tests
+        run: python -m compileall -q auto_modeling_tool scripts tests
       - name: Run test suite
         run: python -m pytest tests -q
 
