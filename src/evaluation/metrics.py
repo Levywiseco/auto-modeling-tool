@@ -18,32 +18,15 @@ from ..core.decorators import time_it
 def accuracy(
     y_true: Union[pl.Series, np.ndarray, List],
     y_pred: Union[pl.Series, np.ndarray, List],
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """
-    Calculate accuracy score.
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True labels.
-    y_pred : array-like
-        Predicted labels.
-        
-    Returns
-    -------
-    float
-        Accuracy score between 0 and 1.
-        
-    Example
-    -------
-    >>> acc = accuracy([1, 0, 1, 1], [1, 0, 0, 1])
-    >>> print(f"Accuracy: {acc:.2%}")
-    Accuracy: 75.00%
-    """
-    y_true = _to_series(y_true, "y_true")
-    y_pred = _to_series(y_pred, "y_pred")
-    
-    return (y_true == y_pred).mean()
+    """Calculate (optionally weighted) accuracy."""
+    true_values = _to_numpy(y_true)
+    pred_values = _to_numpy(y_pred)
+    weights = _validated_weights(sample_weight, len(true_values))
+    return float(np.average(true_values == pred_values, weights=weights))
+
 
 
 def precision(
@@ -51,34 +34,16 @@ def precision(
     y_pred: Union[pl.Series, np.ndarray, List],
     *,
     pos_label: int = 1,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """
-    Calculate precision score.
-    
-    Precision = TP / (TP + FP)
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True labels.
-    y_pred : array-like
-        Predicted labels.
-    pos_label : int, default 1
-        Positive class label.
-        
-    Returns
-    -------
-    float
-        Precision score.
-    """
-    y_true = _to_series(y_true, "y_true")
-    y_pred = _to_series(y_pred, "y_pred")
-    
-    true_positive = ((y_true == pos_label) & (y_pred == pos_label)).sum()
-    false_positive = ((y_true != pos_label) & (y_pred == pos_label)).sum()
-    
-    denominator = true_positive + false_positive
-    return true_positive / denominator if denominator > 0 else 0.0
+    """Calculate weighted precision."""
+    true_values = _to_numpy(y_true)
+    pred_values = _to_numpy(y_pred)
+    weights = _validated_weights(sample_weight, len(true_values))
+    tp = weights[(true_values == pos_label) & (pred_values == pos_label)].sum()
+    fp = weights[(true_values != pos_label) & (pred_values == pos_label)].sum()
+    return float(tp / (tp + fp)) if tp + fp > 0 else 0.0
+
 
 
 def recall(
@@ -86,34 +51,16 @@ def recall(
     y_pred: Union[pl.Series, np.ndarray, List],
     *,
     pos_label: int = 1,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """
-    Calculate recall (sensitivity) score.
-    
-    Recall = TP / (TP + FN)
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True labels.
-    y_pred : array-like
-        Predicted labels.
-    pos_label : int, default 1
-        Positive class label.
-        
-    Returns
-    -------
-    float
-        Recall score.
-    """
-    y_true = _to_series(y_true, "y_true")
-    y_pred = _to_series(y_pred, "y_pred")
-    
-    true_positive = ((y_true == pos_label) & (y_pred == pos_label)).sum()
-    false_negative = ((y_true == pos_label) & (y_pred != pos_label)).sum()
-    
-    denominator = true_positive + false_negative
-    return true_positive / denominator if denominator > 0 else 0.0
+    """Calculate weighted recall."""
+    true_values = _to_numpy(y_true)
+    pred_values = _to_numpy(y_pred)
+    weights = _validated_weights(sample_weight, len(true_values))
+    tp = weights[(true_values == pos_label) & (pred_values == pos_label)].sum()
+    fn = weights[(true_values == pos_label) & (pred_values != pos_label)].sum()
+    return float(tp / (tp + fn)) if tp + fn > 0 else 0.0
+
 
 
 def f1_score(
@@ -121,180 +68,89 @@ def f1_score(
     y_pred: Union[pl.Series, np.ndarray, List],
     *,
     pos_label: int = 1,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """
-    Calculate F1 score.
-    
-    F1 = 2 * (Precision * Recall) / (Precision + Recall)
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True labels.
-    y_pred : array-like
-        Predicted labels.
-    pos_label : int, default 1
-        Positive class label.
-        
-    Returns
-    -------
-    float
-        F1 score.
-    """
-    prec = precision(y_true, y_pred, pos_label=pos_label)
-    rec = recall(y_true, y_pred, pos_label=pos_label)
-    
-    denominator = prec + rec
-    return 2 * (prec * rec) / denominator if denominator > 0 else 0.0
+    """Calculate weighted F1."""
+    prec = precision(y_true, y_pred, pos_label=pos_label, sample_weight=sample_weight)
+    rec = recall(y_true, y_pred, pos_label=pos_label, sample_weight=sample_weight)
+    return float(2 * prec * rec / (prec + rec)) if prec + rec > 0 else 0.0
+
 
 
 def confusion_matrix(
     y_true: Union[pl.Series, np.ndarray, List],
     y_pred: Union[pl.Series, np.ndarray, List],
-) -> Dict[str, int]:
-    """
-    Calculate confusion matrix components.
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True labels.
-    y_pred : array-like
-        Predicted labels.
-        
-    Returns
-    -------
-    dict
-        Dictionary with keys: TP, TN, FP, FN
-        
-    Example
-    -------
-    >>> cm = confusion_matrix([1, 0, 1, 1], [1, 0, 0, 1])
-    >>> print(cm)
-    {'TP': 2, 'TN': 1, 'FP': 0, 'FN': 1}
-    """
-    y_true = _to_series(y_true, "y_true")
-    y_pred = _to_series(y_pred, "y_pred")
-    
-    tp = int(((y_true == 1) & (y_pred == 1)).sum())
-    tn = int(((y_true == 0) & (y_pred == 0)).sum())
-    fp = int(((y_true == 0) & (y_pred == 1)).sum())
-    fn = int(((y_true == 1) & (y_pred == 0)).sum())
-    
-    return {'TP': tp, 'TN': tn, 'FP': fp, 'FN': fn}
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+) -> Dict[str, float]:
+    """Return weighted confusion-matrix components."""
+    true_values = _to_numpy(y_true)
+    pred_values = _to_numpy(y_pred)
+    weights = _validated_weights(sample_weight, len(true_values))
+    return {
+        "TP": float(weights[(true_values == 1) & (pred_values == 1)].sum()),
+        "TN": float(weights[(true_values == 0) & (pred_values == 0)].sum()),
+        "FP": float(weights[(true_values == 0) & (pred_values == 1)].sum()),
+        "FN": float(weights[(true_values == 1) & (pred_values == 0)].sum()),
+    }
+
 
 
 @time_it
 def calculate_auc_roc(
     y_true: Union[pl.Series, np.ndarray, List],
     y_score: Union[pl.Series, np.ndarray, List],
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """
-    Calculate Area Under ROC Curve.
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True binary labels.
-    y_score : array-like
-        Predicted probabilities or scores.
-        
-    Returns
-    -------
-    float
-        AUC-ROC score.
-    """
+    """Calculate weighted ROC AUC."""
     from sklearn.metrics import roc_auc_score
-    
-    y_true = _to_numpy(y_true)
-    y_score = _to_numpy(y_score)
-    
-    return roc_auc_score(y_true, y_score)
+    return float(
+        roc_auc_score(
+            _to_numpy(y_true),
+            _to_numpy(y_score),
+            sample_weight=None if sample_weight is None else _to_numpy(sample_weight),
+        )
+    )
+
 
 
 @time_it
 def calculate_ks(
     y_true: Union[pl.Series, np.ndarray, List],
     y_score: Union[pl.Series, np.ndarray, List],
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> Tuple[float, float]:
-    """
-    Calculate Kolmogorov-Smirnov statistic.
-    
-    KS measures the maximum separation between cumulative distributions
-    of positive and negative classes.
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True binary labels.
-    y_score : array-like
-        Predicted probabilities.
-        
-    Returns
-    -------
-    tuple of (ks_statistic, ks_threshold)
-        KS value and the score threshold where it occurs.
-        
-    Example
-    -------
-    >>> ks, threshold = calculate_ks(y_true, y_prob)
-    >>> print(f"KS: {ks:.4f} at threshold {threshold:.3f}")
-    """
-    y_true = _to_series(y_true, "y_true")
-    y_score = _to_series(y_score, "y_score")
-    
-    df = pl.DataFrame({
-        "target": y_true,
-        "score": y_score
-    }).sort("score", descending=True)
-    
-    n_pos = (df["target"] == 1).sum()
-    n_neg = (df["target"] == 0).sum()
-    
-    if n_pos == 0 or n_neg == 0:
+    """Calculate weighted Kolmogorov-Smirnov statistic."""
+    target = _to_numpy(y_true).astype(float)
+    score = _to_numpy(y_score).astype(float)
+    weights = _validated_weights(sample_weight, len(target))
+    order = np.argsort(-score)
+    target, score, weights = target[order], score[order], weights[order]
+    pos_weight = float(np.sum(weights * target))
+    neg_weight = float(np.sum(weights * (1.0 - target)))
+    if pos_weight <= 0 or neg_weight <= 0:
         return 0.0, 0.0
-    
-    df = df.with_columns([
-        (pl.col("target") == 1).cum_sum().alias("cum_pos"),
-        (pl.col("target") == 0).cum_sum().alias("cum_neg"),
-    ]).with_columns([
-        (pl.col("cum_pos") / n_pos).alias("tpr"),
-        (pl.col("cum_neg") / n_neg).alias("fpr"),
-    ]).with_columns([
-        (pl.col("tpr") - pl.col("fpr")).abs().alias("ks_diff")
-    ])
-    
-    max_idx = df["ks_diff"].arg_max()
-    ks_stat = df["ks_diff"][max_idx]
-    ks_threshold = df["score"][max_idx]
-    
-    return float(ks_stat), float(ks_threshold)
+    tpr = np.cumsum(weights * target) / pos_weight
+    fpr = np.cumsum(weights * (1.0 - target)) / neg_weight
+    differences = np.abs(tpr - fpr)
+    idx = int(np.argmax(differences))
+    return float(differences[idx]), float(score[idx])
+
 
 
 @time_it
 def calculate_gini(
     y_true: Union[pl.Series, np.ndarray, List],
     y_score: Union[pl.Series, np.ndarray, List],
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """
-    Calculate Gini coefficient.
-    
-    Gini = 2 * AUC - 1
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True binary labels.
-    y_score : array-like
-        Predicted probabilities.
-        
-    Returns
-    -------
-    float
-        Gini coefficient.
-    """
-    auc = calculate_auc_roc(y_true, y_score)
-    return 2 * auc - 1
+    """Calculate weighted Gini."""
+    auc = calculate_auc_roc(y_true, y_score, sample_weight=sample_weight)
+    return float(2 * auc - 1)
+
 
 
 @time_it
@@ -303,43 +159,37 @@ def calculate_lift(
     y_score: Union[pl.Series, np.ndarray, List],
     *,
     n_bins: int = 10,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> pl.DataFrame:
-    """
-    Calculate lift chart data.
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True binary labels.
-    y_score : array-like
-        Predicted probabilities.
-    n_bins : int, default 10
-        Number of bins (deciles).
-        
-    Returns
-    -------
-    pl.DataFrame
-        Lift table with columns: bin, count, bad, bad_rate, cumulative_bad_rate, lift
-    """
-    y_true = _to_series(y_true, "y_true")
-    y_score = _to_series(y_score, "y_score")
-    
+    """Calculate a weighted decile/lift table."""
+    y_values = _to_numpy(y_true)
+    score_values = _to_numpy(y_score)
+    weights = _validated_weights(sample_weight, len(y_values))
     df = pl.DataFrame({
-        "target": y_true,
-        "score": y_score
-    }).with_columns([
-        pl.col("score").qcut(n_bins, labels=[str(i) for i in range(n_bins)]).alias("bin")
-    ])
-    
-    overall_bad_rate = df["target"].mean()
-    
-    lift_table = (
-        df.group_by("bin")
+        "target": y_values,
+        "score": score_values,
+        "weight": weights,
+    }).with_columns(
+        pl.col("score").qcut(
+            n_bins,
+            labels=[str(i) for i in range(n_bins)],
+        ).alias("bin")
+    )
+    overall_bad_rate = float(
+        np.average(y_values, weights=weights)
+    ) if len(y_values) else 0.0
+    table = (
+        df.with_columns([
+            (pl.col("target") * pl.col("weight")).alias("bad_weight"),
+        ])
+        .group_by("bin")
         .agg([
-            pl.count().alias("count"),
-            pl.col("target").sum().alias("bad"),
-            pl.col("target").mean().alias("bad_rate"),
+            pl.col("weight").sum().alias("count"),
+            pl.col("bad_weight").sum().alias("bad"),
             pl.col("score").mean().alias("avg_score"),
+        ])
+        .with_columns([
+            (pl.col("bad") / pl.col("count")).alias("bad_rate"),
         ])
         .sort("avg_score", descending=True)
         .with_row_index("rank")
@@ -349,8 +199,8 @@ def calculate_lift(
         ])
         .drop("avg_score")
     )
-    
-    return lift_table
+    return table
+
 
 
 @time_it
@@ -568,31 +418,8 @@ def calculate_all_metrics(
     task: str = "classification",
     sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> Dict[str, float]:
-    """
-    Calculate all common classification metrics.
-    
-    Parameters
-    ----------
-    y_true : array-like
-        True labels.
-    y_pred : array-like
-        Predicted labels.
-    y_score : array-like, optional
-        Predicted probabilities (for AUC, KS, Gini).
-        
-    Returns
-    -------
-    dict
-        Dictionary of metric names and values.
-        
-    Example
-    -------
-    >>> metrics = calculate_all_metrics(y_true, y_pred, y_prob)
-    >>> for name, value in metrics.items():
-    ...     print(f"{name}: {value:.4f}")
-    """
+    """Calculate common weighted classification or regression metrics."""
     logger.info("📊 Calculating all metrics...")
-
     if task == "regression":
         return calculate_regression_metrics(
             y_true,
@@ -601,34 +428,49 @@ def calculate_all_metrics(
         )
     if task != "classification":
         raise ValueError(f"Unknown task: {task}")
-    
+
     metrics = {
-        "accuracy": accuracy(y_true, y_pred),
-        "precision": precision(y_true, y_pred),
-        "recall": recall(y_true, y_pred),
-        "f1_score": f1_score(y_true, y_pred),
+        "accuracy": accuracy(y_true, y_pred, sample_weight=sample_weight),
+        "precision": precision(y_true, y_pred, sample_weight=sample_weight),
+        "recall": recall(y_true, y_pred, sample_weight=sample_weight),
+        "f1_score": f1_score(y_true, y_pred, sample_weight=sample_weight),
     }
-    
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred, sample_weight=sample_weight)
     metrics.update({
         "true_positive": cm["TP"],
         "true_negative": cm["TN"],
         "false_positive": cm["FP"],
         "false_negative": cm["FN"],
     })
-    
     if y_score is not None:
-        metrics["auc_roc"] = calculate_auc_roc(y_true, y_score)
-        
-        ks, ks_threshold = calculate_ks(y_true, y_score)
+        metrics["auc_roc"] = calculate_auc_roc(
+            y_true, y_score, sample_weight=sample_weight
+        )
+        ks, ks_threshold = calculate_ks(
+            y_true, y_score, sample_weight=sample_weight
+        )
         metrics["ks_statistic"] = ks
         metrics["ks_threshold"] = ks_threshold
-        
-        metrics["gini"] = calculate_gini(y_true, y_score)
-    
+        metrics["gini"] = calculate_gini(
+            y_true, y_score, sample_weight=sample_weight
+        )
     logger.info(f"✅ Calculated {len(metrics)} metrics")
-    
     return metrics
+
+
+
+def _validated_weights(
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]],
+    n_rows: int,
+) -> np.ndarray:
+    if sample_weight is None:
+        return np.ones(n_rows, dtype=float)
+    values = _to_numpy(sample_weight).astype(float)
+    if len(values) != n_rows:
+        raise ValueError("sample_weight must have the same length as y")
+    if not np.isfinite(values).all() or (values <= 0).any():
+        raise ValueError("sample_weight must be finite and strictly positive")
+    return values
 
 
 def _to_series(data: Union[pl.Series, np.ndarray, List], name: str = "data") -> pl.Series:
