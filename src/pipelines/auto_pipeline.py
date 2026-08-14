@@ -631,6 +631,7 @@ class AutoPipeline:
                 "model_type": self.model_type,
                 "use_sample_weight": self.use_sample_weight_,
                 "weight_col": self.weight_col_,
+                "metrics": self.metrics_ or {},
             },
         )
 
