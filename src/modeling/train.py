@@ -301,7 +301,11 @@ class ModelTrainer(MarsBaseEstimator):
                 ]
 
         if self.hyperparameter_tuning:
-            self._tune_hyperparameters(X, y)
+            self._tune_hyperparameters(
+                X,
+                y,
+                sample_weight=fit_kwargs.get("sample_weight"),
+            )
         else:
             model_params = dict(self.model_params)
             if (
@@ -345,7 +349,13 @@ class ModelTrainer(MarsBaseEstimator):
         logger.info("✅ Model trained successfully")
         return self
 
-    def _tune_hyperparameters(self, X: np.ndarray, y: np.ndarray) -> None:
+    def _tune_hyperparameters(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        *,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
         """Perform hyperparameter tuning using GridSearchCV."""
         from sklearn.model_selection import GridSearchCV
         
@@ -357,7 +367,12 @@ class ModelTrainer(MarsBaseEstimator):
                 f"using default parameters"
             )
             self.model_ = self._create_model(**self.model_params)
-            self.model_.fit(X, y)
+            fit_kwargs = (
+                {"sample_weight": sample_weight}
+                if sample_weight is not None
+                else {}
+            )
+            self.model_.fit(X, y, **fit_kwargs)
             return
         
         logger.info(f"   Performing hyperparameter tuning with {self.cv_folds}-fold CV...")
@@ -373,7 +388,12 @@ class ModelTrainer(MarsBaseEstimator):
             verbose=0,
         )
         
-        grid_search.fit(X, y)
+        fit_kwargs = (
+            {"sample_weight": sample_weight}
+            if sample_weight is not None
+            else {}
+        )
+        grid_search.fit(X, y, **fit_kwargs)
         
         self.model_ = grid_search.best_estimator_
         self.best_params_ = grid_search.best_params_
