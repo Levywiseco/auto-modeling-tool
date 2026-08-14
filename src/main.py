@@ -221,8 +221,14 @@ def main() -> int:
             results = run_modeling_pipeline(**defaults)
 
         metrics = results["metrics"]
-        metric = metrics.get("auc_roc", metrics.get("accuracy", float("nan")))
-        print(f"\nSuccess. Primary metric: {metric:.4f}")
+        metric = metrics.get(
+            "auc_roc",
+            metrics.get("rmse", metrics.get("accuracy", float("nan"))),
+        )
+        metric_name = "AUC" if "auc_roc" in metrics else (
+            "RMSE" if "rmse" in metrics else "accuracy"
+        )
+        print(f"\nSuccess. Primary metric ({metric_name}): {metric:.4f}")
         return 0
     except Exception as exc:
         print(f"Pipeline failed: {exc}", file=sys.stderr)
