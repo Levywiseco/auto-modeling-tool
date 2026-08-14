@@ -273,6 +273,7 @@ class RegressionPipeline:
             metadata={
                 "split_strategy": self.split_.strategy if self.split_ else None,
                 "random_state": self.random_state,
+                "metrics": self.metrics_ or {},
             },
         )
 
