@@ -228,6 +228,18 @@ class RegressionPipeline:
             output / "pipeline.pkl",
         )
         joblib.dump(artifact, output / "scoring_artifact.pkl")
+        from ..reports.excel import write_model_report
+        write_model_report(
+            output,
+            self.metrics_ or {},
+            metadata={
+                "target_col": self.target_col,
+                "task": "regression",
+                "artifact_version": "1.0",
+                "split_strategy": self.split_.strategy if self.split_ else None,
+                "target_transform": self.target_transform,
+            },
+        )
         return output
 
     @classmethod
