@@ -18,13 +18,32 @@ except ImportError:
 
 
 # Global logger instance
+class EncodingSafeStreamHandler(logging.StreamHandler):
+    """Keep logs usable on terminals whose encoding cannot represent emoji."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            super().emit(record)
+        except UnicodeEncodeError:
+            try:
+                message = self.format(record)
+                encoding = getattr(self.stream, "encoding", None) or "utf-8"
+                safe_message = message.encode(encoding, errors="replace").decode(
+                    encoding, errors="replace"
+                )
+                self.stream.write(safe_message + self.terminator)
+                self.flush()
+            except Exception:
+                self.handleError(record)
+
+
 logger = logging.getLogger("AutoModel")
 logger.setLevel(logging.INFO)
 logger.propagate = False
 
 # Prevent duplicate handlers
 if not logger.handlers:
-    handler = logging.StreamHandler(sys.stdout)
+    handler = EncodingSafeStreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
     
     if COLORLOG_AVAILABLE:
