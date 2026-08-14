@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://levywiseco.github.io/auto-modeling-tool/guide/monitoring/">
+        <link rel="canonical" href="https://levywiseco.github.io/auto-modeling-tool/guide/run-history/">
       
       
-        <link rel="prev" href="../release-gate/">
+        <link rel="prev" href="../config-pipeline/">
       
       
-        <link rel="next" href="../reports/">
+        <link rel="next" href="../data-profiling/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>特征与模型监控 - Auto Modeling Tool</title>
+        <title>运行历史 - Auto Modeling Tool</title>
       
     
     
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              特征与模型监控
+              运行历史
             
           </span>
         </div>
@@ -509,10 +509,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../run-history/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    运行历史
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -528,6 +555,114 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        归档了什么
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run id 怎么读
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        看历史
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        对比两次运行
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        看单次运行的全部细节
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        归档失败不会弄丢模型
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python 里用
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -705,37 +840,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    特征与模型监控
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
         
   
   
@@ -751,70 +859,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="目录">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目录
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        两种基准模式
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#summary_table-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        summary_table 与 status 判定
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        趋势表
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        中文告警
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1171,7 +1215,7 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        两种基准模式
+        归档了什么
       
     </span>
   </a>
@@ -1179,10 +1223,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#summary_table-status" class="md-nav__link">
+  <a href="#run-id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        summary_table 与 status 判定
+        run id 怎么读
       
     </span>
   </a>
@@ -1193,7 +1237,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        趋势表
+        看历史
       
     </span>
   </a>
@@ -1204,7 +1248,51 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        中文告警
+        对比两次运行
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        看单次运行的全部细节
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        归档失败不会弄丢模型
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python 里用
       
     </span>
   </a>
@@ -1231,111 +1319,110 @@
   
 
 
-<h1 id="_1">特征与模型监控</h1>
-<p>模型上线只是开始。<code>Monitor</code> 用与开发期<strong>同一套分箱规则</strong>跟踪
-特征分布、缺失率、坏率与模型分的漂移，并生成中文告警。</p>
-<h2 id="_2">两种基准模式</h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">按期对比（group_col）</label><label for="__tabbed_1_2">对照开发样本（benchmark_df）</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">Monitor</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">report</span> <span class="o">=</span> <span class="n">Monitor</span><span class="p">(</span><span class="n">binner_params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;n_bins&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">})</span><span class="o">.</span><span class="n">monitor</span><span class="p">(</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">df</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">features</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;income&quot;</span><span class="p">,</span> <span class="s2">&quot;utilization&quot;</span><span class="p">,</span> <span class="s2">&quot;model_score&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;target&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">score_col</span><span class="o">=</span><span class="s2">&quot;model_score&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">group_col</span><span class="o">=</span><span class="s2">&quot;score_month&quot;</span><span class="p">,</span>   <span class="c1"># 首期自动作为基准</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
+<h1 id="_1">运行历史</h1>
+<p>跑第二次实验，第一次的结果就没了——这是 3.1.0 之前的状态。现在每次运行都会
+自动归档，可以随时回看和对比。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--config<span class="w"> </span>config.yaml
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">report</span> <span class="o">=</span> <span class="n">Monitor</span><span class="p">()</span><span class="o">.</span><span class="n">monitor</span><span class="p">(</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">prod_df</span><span class="p">,</span>                    <span class="c1"># 生产数据</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">features</span><span class="o">=</span><span class="n">model_features</span><span class="p">,</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">benchmark_df</span><span class="o">=</span><span class="n">dev_df</span><span class="p">,</span>        <span class="c1"># 开发样本作基准</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">binner</span><span class="o">=</span><span class="n">profile</span><span class="o">.</span><span class="n">binner</span><span class="p">,</span>      <span class="c1"># 开发期分箱规则</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+<p>跑完日志里多一行：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>📁 Run archived to runs/20260815-004143-logistic-f2b06f
 </code></pre></div>
+<h2 id="_2">归档了什么</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>runs/20260815-004143-logistic-f2b06f/
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── run.json              # 轻量索引：指标、配置、入模特征
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── config.yaml           # 最终生效的配置（YAML + CLI 覆盖合并后）
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>├── scoring_artifact.pkl
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>├── pipeline.pkl
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>└── Model_Report_1.xlsx
+</code></pre></div>
+<p><code>output/</code> 目录<strong>行为完全不变</strong>，仍然是最新一次的产物。所有既有用法
+（<code>--model output/scoring_artifact.pkl</code> 之类）不受影响，归档是额外多存一份。</p>
+<div class="admonition tip">
+<p class="admonition-title">config.yaml 存的是最终配置</p>
+<p>包含 CLI 覆盖合并后的真实取值。三个月后想复现某个模型，直接
+<code>--config runs/&lt;run_id&gt;/config.yaml</code> 就行，不用回忆当时敲了什么参数。</p>
 </div>
-</div>
-</div>
-<h2 id="summary_table-status">summary_table 与 status 判定</h2>
+<h2 id="run-id">run id 怎么读</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>20260815-004143-logistic-f2b06f
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>└─ 时间戳 ──┘ └─ 算法 ─┘ └ 短哈希
+</code></pre></div>
+<p>时间戳保证按时间排序，算法名便于肉眼识别，短哈希让同一秒内的多次运行不冲突。</p>
+<h2 id="_3">看历史</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.runs<span class="w"> </span>list
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>RUN ID                           CREATED              TASK            MODEL     AUC_ROC  KS_STATISTIC  GINI    SCORE_PSI
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>-------------------------------  -------------------  --------------  --------  -------  ------------  ------  ---------
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>20260815-004159-lightgbm-b9c062  2026-08-15 00:41:59  classification  lightgbm  0.6150   0.1937        0.2301  0.0032
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>20260815-004143-logistic-f2b06f  2026-08-15 00:41:43  classification  logistic  0.6534   0.2451        0.3068  0.0075
+</code></pre></div>
+<p>加 <code>--json</code> 输出结构化数据，方便接自己的看板。</p>
+<h2 id="_4">对比两次运行</h2>
+<p>这是真正有价值的部分——<strong>指标、配置、入模特征三个维度一起看</strong>：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.runs<span class="w"> </span>compare<span class="w"> </span><span class="m">20260815</span>-004143<span class="w"> </span><span class="m">20260815</span>-004159
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>20260815-004143-logistic-f2b06f  -&gt;  20260815-004159-lightgbm-b9c062
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Metrics
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  auc_roc              0.6534 -&gt;     0.6150  (-0.0384)
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  ks_statistic         0.2451 -&gt;     0.1937  (-0.0514)
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  score_psi            0.0075 -&gt;     0.0032  (-0.0043)
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>Config changes
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  model_type               &#39;logistic&#39; -&gt; &#39;lightgbm&#39;
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  n_features               8 -&gt; 2
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>Features  (2 shared)
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>  removed: multi_loan_bin, util_bin
+</code></pre></div>
+<p>run id 可以只写前缀，只要不产生歧义。也可以直接传目录路径。</p>
+<p>Config changes 只显示<strong>真正不同</strong>的键，输出目录这类每次必然不同的路径会被
+自动忽略，不构成噪音。</p>
+<h2 id="_5">看单次运行的全部细节</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.runs<span class="w"> </span>show<span class="w"> </span><span class="m">20260815</span>-004143
+</code></pre></div>
+<p>输出 JSON，含完整配置、全部指标和入模特征列表。</p>
+<h2 id="_6">配置</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">output</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">output</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">runs_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">runs</span><span class="w">        </span><span class="c1"># 归档目录，相对配置文件解析</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">archive_run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">     </span><span class="c1"># 设 false 可关闭</span>
+</code></pre></div>
+<p>命令行等价开关：</p>
 <table>
 <thead>
 <tr>
-<th>列</th>
-<th>含义</th>
+<th>参数</th>
+<th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>psi_latest</code> / <code>psi_max</code></td>
-<td>最新期 / 历史最大 PSI（相对基准）</td>
+<td><code>--runs-dir</code></td>
+<td>指定归档目录</td>
 </tr>
 <tr>
-<td><code>missing_rate_benchmark</code> / <code>missing_rate_latest</code> / <code>missing_delta</code></td>
-<td>缺失率漂移</td>
-</tr>
-<tr>
-<td><code>status</code></td>
-<td><code>正常</code>（PSI&lt;0.1）/ <code>警告</code>（0.1-0.25）/ <code>严重</code>（≥0.25）</td>
+<td><code>--no-archive-run</code></td>
+<td>本次不归档，只写 <code>output/</code></td>
 </tr>
 </tbody>
 </table>
-<p>阈值可在构造函数调整：<code>Monitor(psi_warn=0.1, psi_critical=0.25)</code>。</p>
-<h2 id="_3">趋势表</h2>
-<table>
-<thead>
-<tr>
-<th>表</th>
-<th>触发条件</th>
-<th>内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>trend_tables["psi"]</code></td>
-<td>总是</td>
-<td>特征 × 期 PSI</td>
-</tr>
-<tr>
-<td><code>trend_tables["missing_rate"]</code></td>
-<td>总是</td>
-<td>特征 × 期缺失率</td>
-</tr>
-<tr>
-<td><code>trend_tables["bad_rate"]</code></td>
-<td>给了 <code>target</code></td>
-<td>每期样本量与坏率</td>
-</tr>
-<tr>
-<td><code>trend_tables["score_mean"]</code></td>
-<td>给了 <code>score_col</code></td>
-<td>每期分均值与标准差</td>
-</tr>
-</tbody>
-</table>
-<h2 id="_4">中文告警</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_monitoring_alert</span><span class="p">,</span> <span class="n">AlertConfig</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">text</span> <span class="o">=</span> <span class="n">generate_monitoring_alert</span><span class="p">(</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">report</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">score_col</span><span class="o">=</span><span class="s2">&quot;model_score&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">model_features</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;income&quot;</span><span class="p">,</span> <span class="s2">&quot;utilization&quot;</span><span class="p">],</span>  <span class="c1"># 入模特征优先级更高</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">config</span><span class="o">=</span><span class="n">AlertConfig</span><span class="p">(</span><span class="n">psi_warn</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">psi_critical</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>                       <span class="n">missing_delta_warn</span><span class="o">=</span><span class="mf">0.05</span><span class="p">),</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>   <span class="c1"># 直接推飞书 / 企微 / 邮件</span>
+<h2 id="_7">归档失败不会弄丢模型</h2>
+<p>跑了二十分钟的模型不该因为磁盘满或目录只读而白跑。归档出问题时会打一条
+warning 然后正常返回，<code>output/</code> 里的产物一切照旧。</p>
+<h2 id="python">Python 里用</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool.runs</span><span class="w"> </span><span class="kn">import</span> <span class="n">list_runs</span><span class="p">,</span> <span class="n">resolve_run</span><span class="p">,</span> <span class="n">compare_runs</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">list_runs</span><span class="p">(</span><span class="s2">&quot;runs&quot;</span><span class="p">):</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">headline</span><span class="p">())</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">left</span> <span class="o">=</span> <span class="n">resolve_run</span><span class="p">(</span><span class="s2">&quot;20260815-004143&quot;</span><span class="p">)</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">right</span> <span class="o">=</span> <span class="n">resolve_run</span><span class="p">(</span><span class="s2">&quot;20260815-004159&quot;</span><span class="p">)</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">diff</span> <span class="o">=</span> <span class="n">compare_runs</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;metrics&quot;</span><span class="p">][</span><span class="s2">&quot;auc_roc&quot;</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;config_changes&quot;</span><span class="p">]</span>
 </code></pre></div>
-<p>输出按 🔴 严重 → 🟡 警告排序，入模特征与模型分排在前面；
-一切正常时输出"✅ 各项指标均在阈值内，无需处理"。</p>
-<div class="admonition warning">
-<p class="admonition-title">PSI 口径</p>
-<p>PSI 默认不含缺失箱和特殊值箱（它们的漂移由 <code>missing_delta</code>
-单独衡量）。如需并入，构造 <code>Monitor(psi_include_missing=True,
-psi_include_special=True)</code>。</p>
-</div>
+<p><code>resolve_run</code> 接受完整 id、唯一前缀或目录路径；前缀有歧义会明确报错而不是
+随便挑一个。</p>
 
 
 
@@ -1371,7 +1458,7 @@ psi_include_special=True)</code>。</p>
       <nav class="md-footer__inner md-grid" aria-label="页脚" >
         
           
-          <a href="../release-gate/" class="md-footer__link md-footer__link--prev" aria-label="上一页: 发布门禁">
+          <a href="../config-pipeline/" class="md-footer__link md-footer__link--prev" aria-label="上一页: 配置驱动主流程">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1381,20 +1468,20 @@ psi_include_special=True)</code>。</p>
                 上一页
               </span>
               <div class="md-ellipsis">
-                发布门禁
+                配置驱动主流程
               </div>
             </div>
           </a>
         
         
           
-          <a href="../reports/" class="md-footer__link md-footer__link--next" aria-label="下一页: 报告与导出">
+          <a href="../data-profiling/" class="md-footer__link md-footer__link--next" aria-label="下一页: 数据画像">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 下一页
               </span>
               <div class="md-ellipsis">
-                报告与导出
+                数据画像
               </div>
             </div>
             <div class="md-footer__button md-icon">
