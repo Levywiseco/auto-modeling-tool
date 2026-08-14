@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 import joblib
 import numpy as np
 import polars as pl
+from sklearn.model_selection import train_test_split
 
 from ..core.exceptions import ValidationError
 from ..data.loaders import load_data
@@ -49,6 +50,10 @@ class RegressionPipeline:
         dev_label: Any = "dev",
         oot_label: Any = "oot",
         target_transform: Optional[str] = None,
+        model_params: Optional[Dict[str, Any]] = None,
+        early_stopping_eval: str = "none",
+        early_stopping_rounds: Optional[int] = None,
+        early_stopping_metric: Optional[str] = None,
         clean_strategy: str = "median",
         normalize_method: Optional[str] = "zscore",
     ):
@@ -62,6 +67,10 @@ class RegressionPipeline:
         self.dev_label = dev_label
         self.oot_label = oot_label
         self.target_transform = target_transform
+        self.model_params = dict(model_params or {})
+        self.early_stopping_eval = early_stopping_eval
+        self.early_stopping_rounds = early_stopping_rounds
+        self.early_stopping_metric = early_stopping_metric
         self.clean_strategy = clean_strategy
         self.normalize_method = normalize_method
 
@@ -147,6 +156,7 @@ class RegressionPipeline:
         )
         self.preprocessor_.fit(X_dev_raw)
         X_dev = self.preprocessor_.transform(X_dev_raw)
+        X_oot = self.preprocessor_.transform(X_oot_raw)
 
         sample_weight = None
         if weight_col:
@@ -154,12 +164,71 @@ class RegressionPipeline:
             if not np.isfinite(sample_weight).all() or (sample_weight <= 0).any():
                 raise ValidationError("Sample weights must be finite and strictly positive")
 
+        fit_x = X_dev.to_numpy()
+        fit_y = y_fit
+        eval_x = None
+        eval_y = None
+        eval_weight = None
+        early_eval = kwargs.get(
+            "early_stopping_eval",
+            self.early_stopping_eval,
+        )
+        early_rounds = kwargs.get(
+            "early_stopping_rounds",
+            self.early_stopping_rounds,
+        )
+        if (
+            early_rounds
+            and self.model_type in {"xgboost", "lightgbm", "catboost"}
+            and early_eval in {"dev_holdout", "oot"}
+        ):
+            if early_eval == "oot":
+                eval_x = X_oot.to_numpy()
+                eval_y = self._y_oot.to_numpy()
+                eval_weight = (
+                    sample_weight
+                    if sample_weight is not None
+                    else None
+                )
+            else:
+                indices = np.arange(len(y_fit))
+                fit_idx, eval_idx = train_test_split(
+                    indices,
+                    test_size=0.2,
+                    random_state=self.random_state,
+                )
+                fit_x = X_dev.to_numpy()[fit_idx]
+                fit_y = y_fit[fit_idx]
+                eval_x = X_dev.to_numpy()[eval_idx]
+                eval_y = y_fit[eval_idx]
+                if sample_weight is not None:
+                    sample_weight = sample_weight[fit_idx]
+                    eval_weight = (
+                        dev.get_column(weight_col)
+                        .cast(pl.Float64)
+                        .to_numpy()[eval_idx]
+                    )
+
+        model_params = dict(self.model_params)
+        if kwargs.get("model_params"):
+            model_params.update(kwargs["model_params"])
+        if kwargs.get("early_stopping_metric"):
+            model_params["eval_metric"] = kwargs["early_stopping_metric"]
         self.model_ = ModelTrainer(
             model_type=self.model_type,
             task="regression",
             random_state=self.random_state,
+            **model_params,
         )
-        self.model_.fit(X_dev, y_fit, sample_weight=sample_weight)
+        self.model_.fit(
+            fit_x,
+            fit_y,
+            sample_weight=sample_weight,
+            eval_set=eval_x,
+            eval_y=eval_y,
+            eval_sample_weight=eval_weight,
+            early_stopping_rounds=early_rounds,
+        )
         self.target_transform = target_transform
         return self
 
@@ -218,6 +287,10 @@ class RegressionPipeline:
                 "artifact_version": "1.0",
                 "target_col": self.target_col,
                 "model_type": self.model_type,
+                "model_params": self.model_params,
+                "early_stopping_eval": self.early_stopping_eval,
+                "early_stopping_rounds": self.early_stopping_rounds,
+                "early_stopping_metric": self.early_stopping_metric,
                 "feature_columns": self.feature_columns_,
                 "preprocessor": self.preprocessor_,
                 "model": self.model_,
@@ -238,6 +311,9 @@ class RegressionPipeline:
                 "artifact_version": "1.0",
                 "split_strategy": self.split_.strategy if self.split_ else None,
                 "target_transform": self.target_transform,
+                "model_type": self.model_type,
+                "early_stopping_eval": self.early_stopping_eval,
+                "early_stopping_rounds": self.early_stopping_rounds,
             },
         )
         return output
@@ -249,6 +325,10 @@ class RegressionPipeline:
         pipeline = cls(
             target_col=data["target_col"],
             model_type=data.get("model_type", "xgboost"),
+            model_params=data.get("model_params"),
+            early_stopping_eval=data.get("early_stopping_eval", "none"),
+            early_stopping_rounds=data.get("early_stopping_rounds"),
+            early_stopping_metric=data.get("early_stopping_metric"),
             target_transform=data.get("target_transform"),
         )
         pipeline.feature_columns_ = data["feature_columns"]
