@@ -526,10 +526,47 @@ def calculate_feature_psi(
 
 
 @time_it
+def calculate_regression_metrics(
+    y_true: Union[pl.Series, np.ndarray, List],
+    y_pred: Union[pl.Series, np.ndarray, List],
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+) -> Dict[str, float]:
+    """Calculate RMSE, MAE and R-squared for continuous targets."""
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+    true_values = _to_numpy(y_true).astype(float)
+    pred_values = _to_numpy(y_pred).astype(float)
+    weights = None if sample_weight is None else _to_numpy(sample_weight).astype(float)
+    return {
+        "rmse": float(
+            np.sqrt(
+                mean_squared_error(
+                    true_values,
+                    pred_values,
+                    sample_weight=weights,
+                )
+            )
+        ),
+        "mae": float(
+            mean_absolute_error(
+                true_values,
+                pred_values,
+                sample_weight=weights,
+            )
+        ),
+        "r2": float(r2_score(true_values, pred_values, sample_weight=weights)),
+    }
+
+
+@time_it
 def calculate_all_metrics(
     y_true: Union[pl.Series, np.ndarray, List],
     y_pred: Union[pl.Series, np.ndarray, List],
     y_score: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    *,
+    task: str = "classification",
+    sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> Dict[str, float]:
     """
     Calculate all common classification metrics.
@@ -555,6 +592,15 @@ def calculate_all_metrics(
     ...     print(f"{name}: {value:.4f}")
     """
     logger.info("📊 Calculating all metrics...")
+
+    if task == "regression":
+        return calculate_regression_metrics(
+            y_true,
+            y_pred,
+            sample_weight=sample_weight,
+        )
+    if task != "classification":
+        raise ValueError(f"Unknown task: {task}")
     
     metrics = {
         "accuracy": accuracy(y_true, y_pred),
