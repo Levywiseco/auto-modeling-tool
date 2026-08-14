@@ -30,7 +30,7 @@
 - **模型选择** — logistic / tree / random forest / XGBoost / LightGBM /
   CatBoost，树模型支持 `dev_holdout` / `oot` 早停
 - **数据格式** — CSV / XLSX / XLS / Parquet / PKL
-- **CI** — GitHub Actions，Python 3.10 / 3.11 / 3.12，103 个测试
+- **CI** — GitHub Actions，Python 3.9 / 3.10 / 3.11 / 3.12，103 个测试
 
 ### 变更
 
