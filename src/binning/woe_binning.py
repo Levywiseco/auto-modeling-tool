@@ -88,6 +88,7 @@ class WoeBinner(MarsTransformer):
         special_values: Optional[List[Any]] = None,
         min_samples_bin: int = 5,
         monotonic: bool = False,
+        smoothing: float = 0.5,
     ):
         super().__init__()
         self.n_bins = n_bins
@@ -97,6 +98,9 @@ class WoeBinner(MarsTransformer):
         self.special_values = special_values or []
         self.min_samples_bin = min_samples_bin
         self.monotonic = monotonic
+        self.smoothing = float(smoothing)
+        if self.smoothing < 0:
+            raise ValueError("smoothing must be non-negative")
         
         # Fitted attributes
         self.bin_cuts_: Dict[str, List[float]] = {}
@@ -105,6 +109,8 @@ class WoeBinner(MarsTransformer):
         self.bin_ivs_: Dict[str, Dict[int, float]] = {}
         self.total_iv_: Dict[str, float] = {}
         self.fit_failures_: Dict[str, str] = {}
+        self.category_mappings_: Dict[str, Dict[Any, int]] = {}
+        self.fitted_features_: List[str] = []
         
         # Cache for WOE computation
         self._cache_X: Optional[pl.DataFrame] = None
@@ -112,87 +118,90 @@ class WoeBinner(MarsTransformer):
     
     @time_it
     def _fit_impl(self, X: pl.DataFrame, y: Optional[pl.Series] = None, **kwargs) -> None:
-        """
-        Core fitting logic using Polars vectorized operations.
-        
-        Optimization Strategy:
-        1. Single-pass statistics collection using Polars expressions
-        2. Batch quantile computation across all features
-        3. Parallel CART fitting using joblib (for cart method)
-        """
+        """Fit numeric and categorical WOE mappings on the supplied sample."""
         if y is None:
             raise ValidationError("Target variable 'y' is required for WOE binning")
-        
-        # Cache for later WOE calculation
+        if len(X) != len(y):
+            raise ValidationError("X and y must contain the same number of rows")
+
         self._cache_X = X
         self._cache_y = y
-        
-        # Determine target columns
         target_cols = self.features if self.features else X.columns
-        
-        # Filter to numeric columns only, excluding all-null columns
-        valid_cols: List[str] = []
-        null_cols: List[str] = []
-        
-        # Build aggregation expressions for single-pass min/max scan
-        stats_exprs = []
-        for c in target_cols:
-            if X[c].dtype not in self.NUMERIC_DTYPES:
+        numeric_cols = [
+            column for column in target_cols
+            if column in X.columns and X[column].dtype in self.NUMERIC_DTYPES
+        ]
+        categorical_cols = [
+            column for column in target_cols
+            if column in X.columns
+            and X[column].dtype not in self.NUMERIC_DTYPES
+            and X[column].dtype != pl.Null
+        ]
+
+        valid_numeric: List[str] = []
+        for column in numeric_cols:
+            series = X[column]
+            if series.dtype in [pl.Float32, pl.Float64]:
+                series = series.fill_nan(None)
+            min_value, max_value = series.min(), series.max()
+            if min_value is None and max_value is None:
+                self.fit_failures_[column] = "All-null column"
                 continue
-            stats_exprs.append(pl.col(c).min().alias(f"{c}_min"))
-            stats_exprs.append(pl.col(c).max().alias(f"{c}_max"))
-        
-        # Execute single scan for all statistics
-        if stats_exprs:
-            stats_row = X.select(stats_exprs).row(0)
-            
-            col_idx = 0
-            for c in target_cols:
-                if X[c].dtype not in self.NUMERIC_DTYPES:
-                    continue
-                
-                min_val = stats_row[col_idx * 2]
-                max_val = stats_row[col_idx * 2 + 1]
-                col_idx += 1
-                
-                # Skip all-null columns
-                if min_val is None and max_val is None:
-                    null_cols.append(c)
-                    self.bin_cuts_[c] = []
-                    continue
-                
-                # Skip constant columns
-                if min_val == max_val:
-                    self.fit_failures_[c] = "Constant column"
-                    continue
-                
-                valid_cols.append(c)
-        
-        if not valid_cols:
-            logger.warning("No valid numeric columns found for binning")
+            if min_value == max_value:
+                self.fit_failures_[column] = "Constant column"
+                continue
+            valid_numeric.append(column)
+
+        if valid_numeric:
+            if self.method == "quantile":
+                self._fit_quantile(X, valid_numeric)
+            elif self.method == "uniform":
+                self._fit_uniform(X, valid_numeric)
+            elif self.method == "cart":
+                self._fit_cart(X, y, valid_numeric)
+            else:
+                raise ValueError(f"Unknown binning method: {self.method}")
+
+        if categorical_cols:
+            self._fit_categorical(X, categorical_cols)
+
+        self.fitted_features_ = valid_numeric + categorical_cols
+        if not self.fitted_features_:
+            logger.warning("No usable numeric or categorical columns found for binning")
             return
-        
-        logger.info(f"📊 Features identified: {len(valid_cols)} Numeric, {len(null_cols)} All-Null")
-        logger.info(f"⚙️ Fitting bins for {len(valid_cols)} features (Method: {self.method})")
-        
-        # Route to specific binning method
-        if self.method == "quantile":
-            self._fit_quantile(X, valid_cols)
-        elif self.method == "uniform":
-            self._fit_uniform(X, valid_cols)
-        elif self.method == "cart":
-            self._fit_cart(X, y, valid_cols)
-        else:
-            raise ValueError(f"Unknown binning method: {self.method}")
-        
-        # Generate bin labels
+
         self._generate_mappings()
-        
-        # Calculate WOE values
         self._calculate_woe(X, y)
-        
-        logger.info(f"✅ Binning complete. Fitted {len(self.bin_cuts_)} features")
-    
+        if self.monotonic:
+            self._enforce_monotonic_woe(X, y)
+
+        logger.info(
+            f"✅ Binning complete. Numeric={len(valid_numeric)}, "
+            f"Categorical={len(categorical_cols)}"
+        )
+
+    def _fit_categorical(self, X: pl.DataFrame, cols: List[str]) -> None:
+        """Map frequent categories to bins and unseen/rare values to OTHER."""
+        for column in cols:
+            counts = (
+                X.select(pl.col(column))
+                .drop_nulls()
+                .to_series()
+                .value_counts()
+                .sort("count", descending=True)
+            )
+            mapping: Dict[Any, int] = {}
+            next_bin = 0
+            for row in counts.to_dicts():
+                value = row[column]
+                count = int(row["count"])
+                if count < self.min_samples_bin:
+                    mapping[value] = self.IDX_OTHER
+                else:
+                    mapping[value] = next_bin
+                    next_bin += 1
+            self.category_mappings_[column] = mapping
+
     def _fit_quantile(self, X: pl.DataFrame, cols: List[str]) -> None:
         """
         Ultra-fast quantile binning using Polars expressions.
@@ -403,32 +412,35 @@ class WoeBinner(MarsTransformer):
                 self.bin_cuts_[col] = [float('-inf'), float('inf')]
     
     def _generate_mappings(self) -> None:
-        """Generate bin index to label mappings."""
+        """Generate labels for numeric and categorical bins."""
         for col, cuts in self.bin_cuts_.items():
             if not cuts:
                 continue
-            
             mapping = {self.IDX_MISSING: "Missing"}
-            
             for i in range(len(cuts) - 1):
                 lower = cuts[i]
                 upper = cuts[i + 1]
-                
-                if lower == float('-inf'):
+                if lower == float("-inf"):
                     label = f"{i:02d}_(-inf, {upper:.4g})"
-                elif upper == float('inf'):
+                elif upper == float("inf"):
                     label = f"{i:02d}_[{lower:.4g}, inf)"
                 else:
                     label = f"{i:02d}_[{lower:.4g}, {upper:.4g})"
-                
                 mapping[i] = label
-            
-            # Special value mappings
             for j, val in enumerate(self.special_values):
                 mapping[self.IDX_SPECIAL_START - j] = f"Special_{val}"
-            
             self.bin_mappings_[col] = mapping
-    
+
+        for col, value_mapping in self.category_mappings_.items():
+            mapping = {
+                self.IDX_MISSING: "Missing",
+                self.IDX_OTHER: "Other",
+            }
+            for value, bin_idx in value_mapping.items():
+                if bin_idx >= 0:
+                    mapping.setdefault(bin_idx, f"{bin_idx:02d}_{value}")
+            self.bin_mappings_[col] = mapping
+
     def _calculate_woe(self, X: pl.DataFrame, y: pl.Series) -> None:
         """
         Calculate WOE values using Polars matrix aggregation.
@@ -448,7 +460,7 @@ class WoeBinner(MarsTransformer):
             return
         
         # Calculate WOE for each feature
-        for col in self.bin_cuts_.keys():
+        for col in self.fitted_features_:
             bin_col = f"{col}_bin"
             if bin_col not in X_binned.columns:
                 continue
@@ -479,8 +491,8 @@ class WoeBinner(MarsTransformer):
                 good = row["good"]
                 
                 # Calculate distributions with smoothing
-                dist_bad = (bad + 0.5) / (total_bad + 1)
-                dist_good = (good + 0.5) / (total_good + 1)
+                dist_bad = (bad + self.smoothing) / (total_bad + self.smoothing * 2)
+                dist_good = (good + self.smoothing) / (total_good + self.smoothing * 2)
                 
                 woe = np.log(dist_bad / dist_good)
                 iv = (dist_bad - dist_good) * woe
@@ -493,6 +505,59 @@ class WoeBinner(MarsTransformer):
             self.bin_ivs_[col] = iv_dict
             self.total_iv_[col] = total_iv
     
+    def _enforce_monotonic_woe(self, X: pl.DataFrame, y: pl.Series) -> None:
+        """Apply an isotonic/PAVA-style monotonic calibration to numeric bins."""
+        from sklearn.isotonic import IsotonicRegression
+
+        indexed = self._transform_impl(X, return_type="index")
+        total_bad = float(y.sum())
+        total_good = float(len(y) - total_bad)
+        if total_bad <= 0 or total_good <= 0:
+            return
+
+        for column in self.bin_cuts_:
+            bin_col = f"{column}_bin"
+            if bin_col not in indexed.columns:
+                continue
+            stats = (
+                pl.DataFrame({"bin": indexed[bin_col], "target": y})
+                .filter(pl.col("bin") >= 0)
+                .group_by("bin")
+                .agg([
+                    pl.len().alias("count"),
+                    pl.col("target").mean().alias("bad_rate"),
+                ])
+                .sort("bin")
+            )
+            if len(stats) < 2:
+                continue
+
+            x_values = stats["bin"].to_numpy().astype(float)
+            rates = stats["bad_rate"].to_numpy().astype(float)
+            increasing = IsotonicRegression(increasing=True, out_of_bounds="clip").fit_transform(
+                x_values, rates
+            )
+            decreasing = IsotonicRegression(increasing=False, out_of_bounds="clip").fit_transform(
+                x_values, rates
+            )
+            fitted = increasing if np.sum((increasing - rates) ** 2) <= np.sum((decreasing - rates) ** 2) else decreasing
+            counts = stats["count"].to_numpy().astype(float)
+
+            updated = dict(self.bin_woes_.get(column, {}))
+            iv_total = 0.0
+            for bin_idx, count, bad_rate in zip(x_values.astype(int), counts, fitted):
+                clipped_rate = float(np.clip(bad_rate, 1e-7, 1 - 1e-7))
+                bad = clipped_rate * count
+                good = (1 - clipped_rate) * count
+                dist_bad = (bad + self.smoothing) / (total_bad + self.smoothing * 2)
+                dist_good = (good + self.smoothing) / (total_good + self.smoothing * 2)
+                woe = float(np.log(dist_bad / dist_good))
+                iv = float((dist_bad - dist_good) * woe)
+                updated[bin_idx] = woe
+                iv_total += iv
+            self.bin_woes_[column] = updated
+            self.total_iv_[column] = iv_total
+
     def _get_safe_values(self, dtype: pl.DataType, values: List[Any]) -> List[Any]:
         """Filter values compatible with column dtype to avoid type errors."""
         if not values:
@@ -594,6 +659,42 @@ class WoeBinner(MarsTransformer):
                 else:
                     exprs.append(pl.lit(0.0).alias(bin_col_name))
         
+        for col, value_mapping in self.category_mappings_.items():
+            if col not in X.columns:
+                continue
+
+            result_expr = (
+                pl.when(pl.col(col).is_null())
+                .then(pl.lit(self.IDX_MISSING))
+            )
+            for value, bin_idx in value_mapping.items():
+                result_expr = result_expr.when(pl.col(col) == value).then(pl.lit(bin_idx))
+            result_expr = result_expr.otherwise(pl.lit(self.IDX_OTHER))
+            bin_col_name = f"{col}_bin"
+
+            if return_type == "index":
+                exprs.append(result_expr.cast(pl.Int16).alias(bin_col_name))
+            elif return_type == "label":
+                label_mapping = self.bin_mappings_.get(col, {})
+                label_expr = pl.lit("Other")
+                for bin_idx, label in label_mapping.items():
+                    label_expr = (
+                        pl.when(result_expr == bin_idx)
+                        .then(pl.lit(label))
+                        .otherwise(label_expr)
+                    )
+                exprs.append(label_expr.alias(bin_col_name))
+            elif return_type == "woe":
+                woe_mapping = self.bin_woes_.get(col, {})
+                woe_expr = pl.lit(0.0)
+                for bin_idx, woe_value in woe_mapping.items():
+                    woe_expr = (
+                        pl.when(result_expr == bin_idx)
+                        .then(pl.lit(woe_value))
+                        .otherwise(woe_expr)
+                    )
+                exprs.append(woe_expr.alias(bin_col_name))
+
         if exprs:
             return X.with_columns(exprs)
         return X
@@ -657,7 +758,7 @@ class WoeBinner(MarsTransformer):
         total_bad = y_np.sum()
         total_good = len(y_np) - total_bad
         
-        for col in self.bin_cuts_.keys():
+        for col in self.fitted_features_:
             bin_col = f"{col}_bin"
             if bin_col not in X_binned.columns:
                 continue
