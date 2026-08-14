@@ -109,6 +109,11 @@ class AutoPipeline:
         self._weight_dev: Optional[pl.Series] = None
         self._weight_oot: Optional[pl.Series] = None
         self.report_tables_: Dict[str, Any] = {}
+        self.segment_cols_: List[str] = []
+        self.temporal_col_: Optional[str] = None
+        self.benchmark_cols_: List[str] = []
+        self._dev_frame: Optional[pl.DataFrame] = None
+        self._oot_frame: Optional[pl.DataFrame] = None
 
     @time_it
     def fit(
@@ -147,6 +152,23 @@ class AutoPipeline:
         )
         dev = self.split_.dev
         oot = self.split_.oot
+        self._dev_frame = dev
+        self._oot_frame = oot
+
+        self.segment_cols_ = list(kwargs.get("segment_cols") or [])
+        self.temporal_col_ = kwargs.get("temporal_col")
+        self.benchmark_cols_ = list(kwargs.get("benchmark_cols") or [])
+        requested_eval_cols = self.segment_cols_ + (
+            [self.temporal_col_] if self.temporal_col_ else []
+        ) + self.benchmark_cols_
+        missing_eval_cols = [
+            column for column in requested_eval_cols
+            if column not in df.columns
+        ]
+        if missing_eval_cols:
+            raise ValidationError(
+                f"Evaluation columns are missing from input data: {missing_eval_cols}"
+            )
 
         weight_col = kwargs.get("weight_col")
         use_sample_weight = bool(kwargs.get("use_sample_weight", False))
@@ -492,6 +514,85 @@ class AutoPipeline:
             except Exception as exc:
                 logger.warning(f"Could not build score/stability tables: {exc}")
 
+        if self._oot_frame is not None and self._X_oot_selected is not None:
+            segment_rows = []
+            for segment_col in self.segment_cols_:
+                for value in self._oot_frame[segment_col].unique().to_list():
+                    mask = self._oot_frame[segment_col] == value
+                    group_x = self._X_oot_selected.filter(mask)
+                    group_y = self._y_oot.filter(mask)
+                    group_weight = (
+                        self._weight_oot.filter(mask)
+                        if self._weight_oot is not None
+                        else None
+                    )
+                    if len(group_y) == 0 or len(np.unique(group_y.to_numpy())) < 2:
+                        continue
+                    row = {
+                        "segment_col": segment_col,
+                        "segment": value,
+                        "n_rows": len(group_y),
+                    }
+                    row.update(self._evaluate_selected(group_x, group_y, group_weight))
+                    segment_rows.append(row)
+            if segment_rows:
+                tables["Segment_Summary"] = segment_rows
+
+            if self.temporal_col_:
+                temporal_rows = []
+                for value in self._oot_frame[self.temporal_col_].unique().sort().to_list():
+                    mask = self._oot_frame[self.temporal_col_] == value
+                    group_x = self._X_oot_selected.filter(mask)
+                    group_y = self._y_oot.filter(mask)
+                    if len(group_y) == 0 or len(np.unique(group_y.to_numpy())) < 2:
+                        continue
+                    row = {
+                        "period": value,
+                        "n_rows": len(group_y),
+                    }
+                    row.update(
+                        self._evaluate_selected(
+                            group_x,
+                            group_y,
+                            self._weight_oot.filter(mask)
+                            if self._weight_oot is not None
+                            else None,
+                        )
+                    )
+                    temporal_rows.append(row)
+                if temporal_rows:
+                    tables["Temporal_Stability"] = temporal_rows
+
+            if self.benchmark_cols_:
+                benchmark_rows = []
+                for column in self.benchmark_cols_:
+                    values = self._oot_frame[column].to_numpy()
+                    valid = np.isfinite(values)
+                    if valid.sum() == 0:
+                        continue
+                    y_values = self._y_oot.to_numpy()[valid]
+                    prediction = (values[valid] >= 0.5).astype(int)
+                    weights = (
+                        self._weight_oot.to_numpy()[valid]
+                        if self._weight_oot is not None
+                        else None
+                    )
+                    row = {
+                        "benchmark": column,
+                        "n_rows": int(valid.sum()),
+                    }
+                    row.update(
+                        calculate_all_metrics(
+                            y_values,
+                            prediction,
+                            values[valid],
+                            sample_weight=weights,
+                        )
+                    )
+                    benchmark_rows.append(row)
+                if benchmark_rows:
+                    tables["Benchmark_Performance"] = benchmark_rows
+
         if self.model_ is not None:
             try:
                 tables["Model_Estimation"] = self.model_.get_model_summary()
@@ -574,6 +675,9 @@ class AutoPipeline:
             "metrics": self.metrics_,
             "dev_metrics": self.dev_metrics_,
             "report_tables": self.report_tables_,
+            "segment_cols": self.segment_cols_,
+            "temporal_col": self.temporal_col_,
+            "benchmark_cols": self.benchmark_cols_,
             "scoring_artifact": scoring_artifact,
         }
         joblib.dump(pipeline_data, output_path / "pipeline.pkl")
@@ -649,6 +753,9 @@ class AutoPipeline:
         pipeline.weight_col_ = data.get("weight_col")
         pipeline.use_sample_weight_ = data.get("use_sample_weight", False)
         pipeline.report_tables_ = data.get("report_tables", {})
+        pipeline.segment_cols_ = data.get("segment_cols", [])
+        pipeline.temporal_col_ = data.get("temporal_col")
+        pipeline.benchmark_cols_ = data.get("benchmark_cols", [])
         return pipeline
 
 
