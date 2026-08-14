@@ -24,6 +24,7 @@ from .calibration import (
 from .scorecard import (
     ScorecardBuilder,
     build_scorecard,
+    probability_to_credit_score,
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     # Scorecard
     "ScorecardBuilder",
     "build_scorecard",
+    "probability_to_credit_score",
 ]
