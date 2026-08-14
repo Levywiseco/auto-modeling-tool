@@ -42,7 +42,7 @@ a multi-sheet audit report, and a pre-release quality gate.
 - Configurable classification algorithms (logistic, tree, random forest,
   XGBoost, LightGBM, CatBoost) with `dev_holdout` / `oot` early stopping
 - Data loaders for CSV, XLSX, XLS, Parquet and PKL
-- GitHub Actions CI running the suite on Python 3.10 / 3.11 / 3.12
+- GitHub Actions CI running the suite on Python 3.9 / 3.10 / 3.11 / 3.12
 - Tests: `test_config.py`, `test_regression.py`, `test_reports.py`,
   `test_exploration.py`, `test_pipeline_contract.py` (103 tests total)
 
@@ -76,8 +76,8 @@ a multi-sheet audit report, and a pre-release quality gate.
 - `--test-size` now means "proportion held out as OOT when no sample column or
   date boundary is given", rather than a plain random train/test split
 - Low-level APIs from v2.1.0 are untouched
-- `requires-python` stays at `>=3.9` and is accurate: the full suite passes on
-  3.9.6 (103 passed), matching 3.10 / 3.11 / 3.12
+- `requires-python` stays at `>=3.9` and is now enforced: all four versions run
+  the full suite in CI, 103 passed on each
 
 ### Upgrade note
 
