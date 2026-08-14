@@ -1204,7 +1204,7 @@
 <p>Auto Modeling Tool 是一个 Polars 优先的信贷风控建模工具库，覆盖
 数据画像、分箱评估、特征筛选、建模、监控与评分卡交付的完整工作流。</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile_risk</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile_risk</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;month&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;2026-01&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;2026-02&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;2026-03&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span>
@@ -1241,7 +1241,7 @@
 <tbody>
 <tr>
 <td>🚀 跑一个完整模型</td>
-<td><code>python -m src.main --config ...</code></td>
+<td><code>python -m auto_modeling_tool.main --config ...</code></td>
 <td><a href="guide/config-pipeline/">配置驱动主流程</a></td>
 </tr>
 <tr>
@@ -1287,7 +1287,7 @@
 </tbody>
 </table>
 <h2 id="_2">一条命令跑完整条链路</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>src.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml
 </code></pre></div>
 <p>Dev/OOT 防泄漏切分 → 预处理 → WOE 分箱 → 特征筛选 → 建模 → 多页审计报告
 → 可独立部署的 <code>scoring_artifact.pkl</code>。改 YAML 就能换任务类型、算法、

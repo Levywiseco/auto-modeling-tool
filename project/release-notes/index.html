@@ -1363,29 +1363,29 @@
 可部署的打分 Artifact、多页审计报告与发布门禁。</p>
 <h3 id="_1">新增</h3>
 <ul>
-<li><strong>配置驱动主流程</strong> — <code>python -m src.main --config configs/pipeline_config.yaml</code><ul>
-<li><code>src.config</code>：YAML schema、相对路径按配置文件解析、旧键别名兼容</li>
+<li><strong>配置驱动主流程</strong> — <code>python -m auto_modeling_tool.main --config configs/pipeline_config.yaml</code><ul>
+<li><code>auto_modeling_tool.config</code>：YAML schema、相对路径按配置文件解析、旧键别名兼容</li>
 <li>29 个新 CLI 参数，每项配置都能临时覆盖</li>
 <li>见<a href="../../guide/config-pipeline/">配置驱动主流程</a></li>
 </ul>
 </li>
-<li><strong>打分 Artifact</strong> — <code>src.modeling.artifact</code><ul>
+<li><strong>打分 Artifact</strong> — <code>auto_modeling_tool.modeling.artifact</code><ul>
 <li><code>scoring_artifact.pkl</code> 打包预处理器、分箱、筛选器与模型</li>
 <li><code>score_with_artifact</code> 拿原始字段直接打分，带列契约校验</li>
 <li>见<a href="../../guide/scoring-artifact/">独立打分与 Artifact</a></li>
 </ul>
 </li>
-<li><strong>回归任务</strong> — <code>src.pipelines.regression_pipeline</code><ul>
+<li><strong>回归任务</strong> — <code>auto_modeling_tool.pipelines.regression_pipeline</code><ul>
 <li>RMSE / MAE / R²，可选 <code>log1p</code> 目标变换（打分自动逆变换）</li>
 <li>见<a href="../../guide/regression/">回归任务</a></li>
 </ul>
 </li>
-<li><strong>发布门禁</strong> — <code>src.evaluation.quality_gate</code><ul>
+<li><strong>发布门禁</strong> — <code>auto_modeling_tool.evaluation.quality_gate</code><ul>
 <li>Artifact 契约 → 字段契约 → 报告 sheet 契约 → 可选 AUC/PSI 阈值</li>
 <li>见<a href="../../guide/release-gate/">发布门禁</a></li>
 </ul>
 </li>
-<li><strong>Excel 审计报告</strong> — <code>src.reports.excel</code>，分箱 / WOE / IV / 变量审计 /
+<li><strong>Excel 审计报告</strong> — <code>auto_modeling_tool.reports.excel</code>，分箱 / WOE / IV / 变量审计 /
   筛选 / Dev-OOT 指标 / 分数分箱 / Score PSI / 稳定性 / 分群 / 跨期 / 基准</li>
 <li><strong>信用分转换</strong> — 可配 <code>base_score</code> / <code>pdo</code> / 上下限</li>
 <li><strong>独立脚本</strong> — <code>score_new_samples</code> / <code>evaluate_model_performance</code> /
@@ -1431,31 +1431,31 @@
 对象体系与监控告警模块。</p>
 <h3 id="_5">新增</h3>
 <ul>
-<li><strong><code>src.analysis</code></strong> — 任务式入口<ul>
+<li><strong><code>auto_modeling_tool.analysis</code></strong> — 任务式入口<ul>
 <li><code>profile_data(df, ...)</code>：数据质量画像（overview / dq / stats 三表 + 按期趋势）</li>
 <li><code>profile_risk(df, target=...)</code>：一次调用完成分箱 + IV/KS + 跨期 PSI，
   返回 <code>RiskProfile</code>（report + 可复用 binner）</li>
 </ul>
 </li>
-<li><strong><code>src.monitoring</code></strong> — 监控与告警<ul>
+<li><strong><code>auto_modeling_tool.monitoring</code></strong> — 监控与告警<ul>
 <li><code>Monitor</code>：PSI / 缺失率 / 坏率 / 分均值漂移监控，支持
   <code>group_col</code> 按期对比与 <code>benchmark_df</code> 对照开发样本两种基准模式</li>
 <li><code>generate_monitoring_alert</code> + <code>AlertConfig</code>：按优先级排序的中文告警文本</li>
 </ul>
 </li>
-<li><strong><code>src.reports</code></strong> — 结构化 Report 对象<ul>
+<li><strong><code>auto_modeling_tool.reports</code></strong> — 结构化 Report 对象<ul>
 <li><code>DataProfileReport</code> / <code>BinningReport</code> / <code>RiskProfile</code> / <code>MonitoringReport</code></li>
 <li>统一 <code>summary_table</code> / <code>detail_table</code> / <code>trend_tables</code> / <code>metadata</code> 结构</li>
 <li><code>to_markdown()</code> / <code>save()</code> 导出</li>
 </ul>
 </li>
-<li><strong><code>src.evaluation.stability</code></strong> — 分箱分布 PSI 计算原语
+<li><strong><code>auto_modeling_tool.evaluation.stability</code></strong> — 分箱分布 PSI 计算原语
   （<code>bin_distribution</code> / <code>psi_from_distributions</code> / <code>psi_level</code>）</li>
 <li><strong>文档站</strong> — MkDocs Material，含 Quickstart、API 约定、使用指南与 Reference</li>
 </ul>
 <h3 id="_6">变更</h3>
 <ul>
-<li>顶层包直接导出工作流 API：<code>from src import profile_risk, Monitor, ...</code></li>
+<li>顶层包直接导出工作流 API：<code>from auto_modeling_tool import profile_risk, Monitor, ...</code></li>
 <li>README 重写为"从任务开始"结构，新增稳定性分级说明</li>
 </ul>
 <h3 id="_7">兼容性</h3>

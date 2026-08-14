@@ -1215,57 +1215,57 @@
 </thead>
 <tbody>
 <tr>
-<td><code>src.binning</code></td>
+<td><code>auto_modeling_tool.binning</code></td>
 <td><strong>Stable</strong></td>
 <td>接口不做破坏性变更</td>
 </tr>
 <tr>
-<td><code>src.features</code></td>
+<td><code>auto_modeling_tool.features</code></td>
 <td><strong>Stable</strong></td>
 <td>同上</td>
 </tr>
 <tr>
-<td><code>src.evaluation</code></td>
+<td><code>auto_modeling_tool.evaluation</code></td>
 <td><strong>Stable</strong></td>
 <td>同上</td>
 </tr>
 <tr>
-<td><code>src.analysis</code>（<code>profile_data</code> / <code>profile_risk</code>）</td>
+<td><code>auto_modeling_tool.analysis</code>（<code>profile_data</code> / <code>profile_risk</code>）</td>
 <td><strong>Stable</strong></td>
 <td>2.1.0 起提供</td>
 </tr>
 <tr>
-<td><code>src.reports</code></td>
+<td><code>auto_modeling_tool.reports</code></td>
 <td><strong>Stable</strong></td>
 <td>表<strong>新增列</strong>不视为破坏性变更</td>
 </tr>
 <tr>
-<td><code>src.monitoring</code></td>
+<td><code>auto_modeling_tool.monitoring</code></td>
 <td><strong>Experimental</strong></td>
 <td>告警阈值、文案、summary 列可能调整</td>
 </tr>
 <tr>
-<td><code>src.pipelines</code></td>
+<td><code>auto_modeling_tool.pipelines</code></td>
 <td><strong>Experimental</strong></td>
 <td>接口可能调整</td>
 </tr>
 <tr>
-<td><code>src.modeling.tuning</code> / <code>calibration</code></td>
-<td><strong>Experimental</strong></td>
-<td>接口可能调整</td>
+<td><code>auto_modeling_tool.modeling.tuning</code> / <code>calibration</code><br><code>auto_modeling_tool.evaluation.cross_validation</code></td>
+<td><strong>Experimental</strong><br>未接入流水线</td>
+<td>只能直接 import 使用；<code>auto_pipeline</code> 不调用它们，<code>ModelTrainer</code> 另有一套私有调参实现</td>
 </tr>
 <tr>
-<td><code>src.config</code>（YAML schema）</td>
+<td><code>auto_modeling_tool.config</code>（YAML schema）</td>
 <td><strong>Experimental</strong></td>
 <td>2.2.0 起提供；字段名可能调整，旧键保留别名</td>
 </tr>
 <tr>
-<td><code>src.modeling.artifact</code></td>
+<td><code>auto_modeling_tool.modeling.artifact</code></td>
 <td><strong>Experimental</strong></td>
 <td>2.2.0 起提供；artifact 格式带 <code>artifact_version</code></td>
 </tr>
 <tr>
-<td><code>src.evaluation.quality_gate</code></td>
+<td><code>auto_modeling_tool.evaluation.quality_gate</code></td>
 <td><strong>Experimental</strong></td>
 <td>2.2.0 起提供；检查项可能增加</td>
 </tr>

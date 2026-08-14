@@ -1334,7 +1334,7 @@
 让主流程直接输出这一列。</p>
 <h2 id="python">Python 里用</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.modeling.artifact</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_scoring_artifact</span><span class="p">,</span> <span class="n">score_with_artifact</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool.modeling.artifact</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_scoring_artifact</span><span class="p">,</span> <span class="n">score_with_artifact</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">artifact</span> <span class="o">=</span> <span class="n">load_scoring_artifact</span><span class="p">(</span><span class="s2">&quot;output/scoring_artifact.pkl&quot;</span><span class="p">)</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;new_applications.csv&quot;</span><span class="p">)</span>
@@ -1347,7 +1347,7 @@
 <p>回归 artifact 不支持 <code>return_proba=True</code>，会抛异常。</p>
 <h2 id="artifact_2">自己构造 Artifact</h2>
 <p>如果你的流程不走 <code>auto_pipeline</code>，也可以手工组装：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.modeling.artifact</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_scoring_artifact</span><span class="p">,</span> <span class="n">save_scoring_artifact</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool.modeling.artifact</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_scoring_artifact</span><span class="p">,</span> <span class="n">save_scoring_artifact</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">artifact</span> <span class="o">=</span> <span class="n">build_scoring_artifact</span><span class="p">(</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">target_col</span><span class="o">=</span><span class="s2">&quot;target&quot;</span><span class="p">,</span>

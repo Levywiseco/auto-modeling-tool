@@ -1249,7 +1249,7 @@
 
 <h1 id="_1">配置驱动主流程</h1>
 <p>2.2.0 起，常规建模不需要写 Python：改一份 YAML，跑一条命令。</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>src.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml
 </code></pre></div>
 <p>配置里的相对路径按<strong>配置文件所在目录</strong>解析，不是按当前工作目录 ——
 把配置和数据放一起，在任何目录下跑结果都一样。</p>
@@ -1345,7 +1345,7 @@ OOT AUC 通常会低一些 —— 那才是真实水平。</p>
 </div>
 <h2 id="cli">CLI 覆盖</h2>
 <p>每个配置项都能用命令行临时盖掉，适合做对比实验而不改文件：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>src.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--model<span class="w"> </span>xgboost<span class="w"> </span>--early-stopping-eval<span class="w"> </span>oot<span class="w"> </span>--n-features<span class="w"> </span><span class="m">30</span>
 </code></pre></div>
 <p>常用覆盖参数：</p>
@@ -1394,7 +1394,7 @@ OOT AUC 通常会低一些 —— 那才是真实水平。</p>
 <p>完整清单见 <a href="../../reference/cli/">CLI 与脚本参考</a>。</p>
 <h2 id="_3">不用配置文件也行</h2>
 <p>老的纯 CLI 用法完全保留：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>src.main<span class="w"> </span>--input<span class="w"> </span>data.csv<span class="w"> </span>--target<span class="w"> </span>target<span class="w"> </span>--output<span class="w"> </span>output
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--input<span class="w"> </span>data.csv<span class="w"> </span>--target<span class="w"> </span>target<span class="w"> </span>--output<span class="w"> </span>output
 </code></pre></div>
 <h2 id="_4">输出物</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>output/

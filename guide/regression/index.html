@@ -1261,10 +1261,10 @@
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">modeling</span><span class="p">:</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">algorithm</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xgboost</span><span class="w">          </span><span class="c1"># 回归默认就是 xgboost</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>src.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--config<span class="w"> </span>configs/pipeline_config.yaml
 </code></pre></div>
 <p>或者纯命令行：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>src.main<span class="w"> </span>--input<span class="w"> </span>data.csv<span class="w"> </span>--target<span class="w"> </span>loss_amount<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>auto_modeling_tool.main<span class="w"> </span>--input<span class="w"> </span>data.csv<span class="w"> </span>--target<span class="w"> </span>loss_amount<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--target-mode<span class="w"> </span>regression<span class="w"> </span>--model<span class="w"> </span>xgboost<span class="w"> </span>--target-transform<span class="w"> </span>log1p
 </code></pre></div>
 <h2 id="_3">和分类的差别</h2>
@@ -1320,7 +1320,7 @@
 <p><code>log1p</code> 要求目标非负，有负值会直接抛 <code>ValidationError</code>。</p>
 </div>
 <h2 id="python">Python 里用</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.pipelines.regression_pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">RegressionPipeline</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool.pipelines.regression_pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">RegressionPipeline</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">pipeline</span> <span class="o">=</span> <span class="n">RegressionPipeline</span><span class="p">(</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">target_col</span><span class="o">=</span><span class="s2">&quot;loss_amount&quot;</span><span class="p">,</span>
@@ -1338,7 +1338,7 @@
 <a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">preds</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">new_df</span><span class="p">)</span>     <span class="c1"># 已逆变换的预测值</span>
 </code></pre></div>
 <p>一步到位的函数式入口：</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.pipelines.regression_pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_regression_pipeline</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool.pipelines.regression_pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_regression_pipeline</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">result</span> <span class="o">=</span> <span class="n">run_regression_pipeline</span><span class="p">(</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">&quot;data.csv&quot;</span><span class="p">,</span>

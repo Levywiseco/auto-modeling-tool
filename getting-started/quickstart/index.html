@@ -1271,7 +1271,7 @@
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="p">})</span>
 </code></pre></div>
 <h2 id="1">1. 数据画像</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile_data</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile_data</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">dq</span> <span class="o">=</span> <span class="n">profile_data</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s2">&quot;target&quot;</span><span class="p">,</span> <span class="n">group_col</span><span class="o">=</span><span class="s2">&quot;month&quot;</span><span class="p">,</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>                  <span class="n">special_values</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">999</span><span class="p">])</span>
@@ -1281,7 +1281,7 @@
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">dq</span><span class="o">.</span><span class="n">trend_tables</span><span class="p">[</span><span class="s2">&quot;missing_rate&quot;</span><span class="p">]</span>    <span class="c1"># 缺失率按月趋势</span>
 </code></pre></div>
 <h2 id="2">2. 特征风险评估</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile_risk</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">profile_risk</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">profile</span> <span class="o">=</span> <span class="n">profile_risk</span><span class="p">(</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">df</span><span class="p">,</span>
@@ -1305,7 +1305,7 @@
 <a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="n">profile</span><span class="o">.</span><span class="n">report</span><span class="o">.</span><span class="n">trend_tables</span><span class="p">[</span><span class="s2">&quot;psi&quot;</span><span class="p">]</span> <span class="c1"># 特征 × 月份 PSI 矩阵</span>
 </code></pre></div>
 <h2 id="3">3. 上线监控</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">Monitor</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">Monitor</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">report</span> <span class="o">=</span> <span class="n">Monitor</span><span class="p">()</span><span class="o">.</span><span class="n">monitor</span><span class="p">(</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">df_prod</span><span class="p">,</span>                       <span class="c1"># 生产期数据</span>
@@ -1318,7 +1318,7 @@
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">report</span><span class="o">.</span><span class="n">summary_table</span>               <span class="c1"># psi_max / missing_delta / status</span>
 </code></pre></div>
 <h2 id="4">4. 中文告警</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">src</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_monitoring_alert</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">auto_modeling_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_monitoring_alert</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">generate_monitoring_alert</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">model_features</span><span class="o">=</span><span class="n">profile</span><span class="o">.</span><span class="n">features</span><span class="p">))</span>
 </code></pre></div>
