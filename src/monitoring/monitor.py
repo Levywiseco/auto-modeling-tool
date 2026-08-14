@@ -3,6 +3,7 @@
 
 from typing import Any, Dict, List, Optional
 
+import numpy as np
 import polars as pl
 
 from ..analysis._frame import ensure_polars, group_keys_sorted, resolve_features
@@ -216,28 +217,63 @@ class Monitor:
 
         # ---- target / score trends -------------------------------------
         if target is not None and target in df.columns:
-            key = group_col if group_col is not None else pl.lit("current").alias("group")
-            trend_tables["bad_rate"] = (
-                df.group_by(key)
-                .agg(pl.len().alias("count"), pl.col(target).mean().alias("bad_rate"))
-                .sort(group_col if group_col is not None else "group")
-            )
+            bad_rows = []
+            for g in groups:
+                part = df if group_col is None else df.filter(pl.col(group_col) == g)
+                part_weight = resolve_weight(part)
+                target_values = part[target].cast(pl.Float64).to_numpy()
+                if part_weight is None:
+                    total_weight = float(len(target_values))
+                    bad_rate = float(np.mean(target_values)) if len(target_values) else 0.0
+                else:
+                    weights = part_weight.to_numpy()
+                    total_weight = float(weights.sum())
+                    bad_rate = float(np.average(target_values, weights=weights))
+                bad_rows.append(
+                    {
+                        "group": str(g),
+                        "count": total_weight,
+                        "bad_rate": bad_rate,
+                    }
+                )
+            trend_tables["bad_rate"] = pl.DataFrame(bad_rows)
+
         score_mean_delta: Optional[float] = None
         if score_col is not None and score_col in df.columns:
-            key = group_col if group_col is not None else pl.lit("current").alias("group")
-            score_trend = (
-                df.group_by(key)
-                .agg(
-                    pl.col(score_col).mean().alias("score_mean"),
-                    pl.col(score_col).std().alias("score_std"),
+            score_rows = []
+            for g in groups:
+                part = df if group_col is None else df.filter(pl.col(group_col) == g)
+                part_weight = resolve_weight(part)
+                score_values = part[score_col].cast(pl.Float64).to_numpy()
+                if part_weight is None:
+                    score_mean = float(np.mean(score_values)) if len(score_values) else 0.0
+                    score_std = float(np.std(score_values)) if len(score_values) else 0.0
+                else:
+                    weights = part_weight.to_numpy()
+                    score_mean = float(np.average(score_values, weights=weights))
+                    score_std = float(
+                        np.sqrt(np.average((score_values - score_mean) ** 2, weights=weights))
+                    )
+                score_rows.append(
+                    {
+                        "group": str(g),
+                        "score_mean": score_mean,
+                        "score_std": score_std,
+                    }
                 )
-                .sort(group_col if group_col is not None else "group")
-            )
+            score_trend = pl.DataFrame(score_rows)
             trend_tables["score_mean"] = score_trend
-            bench_score = bench[score_col].mean() if score_col in bench.columns else None
-            if bench_score:
-                latest_score = score_trend["score_mean"][-1]
-                score_mean_delta = (latest_score - bench_score) / abs(bench_score)
+            if score_col in bench.columns:
+                bench_score_values = bench[score_col].cast(pl.Float64).to_numpy()
+                if bench_weight is None:
+                    bench_score = float(np.mean(bench_score_values))
+                else:
+                    bench_score = float(
+                        np.average(bench_score_values, weights=bench_weight.to_numpy())
+                    )
+                if abs(bench_score) > 1e-12:
+                    latest_score = score_trend["score_mean"][-1]
+                    score_mean_delta = (latest_score - bench_score) / abs(bench_score)
 
         # ---- feature-level summary -------------------------------------
         summary_rows = []
