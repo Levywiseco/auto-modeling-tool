@@ -2,7 +2,7 @@
 """Serializable scoring artifact helpers for raw-driver inference."""
 
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import joblib
 import numpy as np
@@ -24,7 +24,7 @@ def build_scoring_artifact(
     binner: Any,
     selector: Any,
     model: Any,
-    metadata: Dict[str, Any] | None = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Bundle every fitted transform needed for independent scoring."""
     return {
