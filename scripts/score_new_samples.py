@@ -22,15 +22,17 @@ def main() -> int:
 
     artifact = load_scoring_artifact(args.model)
     raw = load_data(args.input)
-    probabilities = score_with_artifact(artifact, raw, return_proba=True)
-    result = raw.with_columns(pl.Series("prediction", probabilities))
+    is_regression = artifact.get("task") == "regression"
+    predictions = score_with_artifact(artifact, raw, return_proba=not is_regression)
+    output_column = "prediction" if not is_regression else "pred_value"
+    result = raw.with_columns(pl.Series(output_column, predictions))
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.suffix.lower() == ".parquet":
         result.write_parquet(output)
     else:
         result.write_csv(output)
-    print(f"Saved {len(result)} scores to {output}")
+    print(f"Saved {len(result)} {output_column} values to {output}")
     return 0
 
 
