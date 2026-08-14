@@ -325,6 +325,31 @@ class ScorecardBuilder:
         }
 
 
+def probability_to_credit_score(
+    probability: Union[float, np.ndarray, List[float]],
+    *,
+    base_score: float = 500.0,
+    pdo: float = 50.0,
+    min_score: float = 300.0,
+    max_score: float = 900.0,
+) -> np.ndarray:
+    """Map default probability to a clipped credit score.
+
+    The guide's convention is base_score at p=0.5 and pdo points
+    for each doubling/halving of the good-to-bad odds.
+    """
+    if pdo <= 0:
+        raise ValueError("pdo must be positive")
+    if min_score > max_score:
+        raise ValueError("min_score must not exceed max_score")
+    values = np.asarray(probability, dtype=float)
+    if not np.isfinite(values).all():
+        raise ValueError("probability must contain only finite values")
+    clipped = np.clip(values, 1e-12, 1.0 - 1e-12)
+    scores = base_score + (pdo / np.log(2.0)) * np.log((1.0 - clipped) / clipped)
+    return np.clip(scores, min_score, max_score)
+
+
 @time_it
 def build_scorecard(
     model: Any,
