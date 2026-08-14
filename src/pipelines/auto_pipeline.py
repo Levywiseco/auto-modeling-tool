@@ -145,7 +145,10 @@ class AutoPipeline:
         
         if isinstance(data, (str, Path)):
             logger.info("\n📂 Loading data...")
-            df = load_data(data)
+            load_kwargs = {}
+            if kwargs.get("encoding") and Path(data).suffix.lower() == ".csv":
+                load_kwargs["encoding"] = kwargs["encoding"]
+            df = load_data(data, **load_kwargs)
         else:
             df = data
         
