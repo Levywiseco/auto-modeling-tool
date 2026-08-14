@@ -73,3 +73,29 @@ def test_scorecard_uses_bin_index_for_points():
     np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6)
     scores = scorecard.score(X)
     assert len(scores) == len(X)
+
+
+def test_encoding_safe_stream_handler_replaces_unrepresentable_text():
+    import logging
+
+    from src.core.logger import EncodingSafeStreamHandler
+
+    class GbkStream:
+        encoding = "gbk"
+
+        def __init__(self):
+            self.values = []
+
+        def write(self, value):
+            value.encode(self.encoding)
+            self.values.append(value)
+
+        def flush(self):
+            pass
+
+    stream = GbkStream()
+    handler = EncodingSafeStreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    handler.emit(logging.LogRecord("test", logging.INFO, "<test>", 1, "✅ safe", (), None))
+
+    assert "".join(stream.values) == "? safe\n"
