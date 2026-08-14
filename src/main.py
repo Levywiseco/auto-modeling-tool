@@ -63,8 +63,6 @@ def run_modeling_pipeline(
         "oot_start": oot_start,
         "dev_label": dev_label,
         "oot_label": oot_label,
-        "clean_strategy": clean_strategy,
-        "normalize_method": normalize_method,
     }
     fit_kwargs = {
         "sample_col": sample_col,
@@ -99,6 +97,8 @@ def run_modeling_pipeline(
             early_stopping_eval=early_stopping_eval,
             early_stopping_rounds=early_stopping_rounds,
             early_stopping_metric=early_stopping_metric,
+            clean_strategy=clean_strategy,
+            normalize_method=normalize_method,
             **common,
         )
         pipeline.fit(data_path, **fit_kwargs)
