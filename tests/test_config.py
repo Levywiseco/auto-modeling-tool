@@ -59,13 +59,30 @@ default_config:
     assert kwargs["test_size"] == pytest.approx(0.3)
 
 
-def test_non_logistic_algorithm_is_rejected_until_task_abstraction_is_ready():
+def test_supported_classification_algorithms_are_configurable():
+    kwargs = config_to_pipeline_kwargs(
+        {
+            "data": {"path": "data.csv"},
+            "shared": {"bad_col": "target"},
+            "modeling": {
+                "algorithm": "xgboost",
+                "early_stopping_eval": "dev_holdout",
+                "early_stopping_rounds": 20,
+            },
+        }
+    )
+    assert kwargs["model_type"] == "xgboost"
+    assert kwargs["early_stopping_eval"] == "dev_holdout"
+    assert kwargs["early_stopping_rounds"] == 20
+
+
+def test_unsupported_algorithm_is_rejected():
     with pytest.raises(ValueError, match="Unsupported algorithm"):
         config_to_pipeline_kwargs(
             {
                 "data": {"path": "data.csv"},
                 "shared": {"bad_col": "target"},
-                "modeling": {"algorithm": "lightgbm"},
+                "modeling": {"algorithm": "unsupported_model"},
             }
         )
 
