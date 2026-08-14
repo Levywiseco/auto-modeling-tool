@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """Regression tests for the Dev/OOT and scoring contracts."""
 
 import numpy as np
 import polars as pl
 from sklearn.linear_model import LogisticRegression
 
-from src.binning.woe_binning import WoeBinner
-from src.data.preprocess import DataPreprocessor
-from src.data.split import split_dev_oot
-from src.modeling.scorecard import (
+from auto_modeling_tool.binning.woe_binning import WoeBinner
+from auto_modeling_tool.data.preprocess import DataPreprocessor
+from auto_modeling_tool.data.split import split_dev_oot
+from auto_modeling_tool.modeling.scorecard import (
     ScorecardBuilder,
     probability_to_credit_score,
 )
@@ -81,7 +80,7 @@ def test_scorecard_uses_bin_index_for_points():
 def test_encoding_safe_stream_handler_replaces_unrepresentable_text():
     import logging
 
-    from src.core.logger import EncodingSafeStreamHandler
+    from auto_modeling_tool.core.logger import EncodingSafeStreamHandler
 
     class GbkStream:
         encoding = "gbk"
@@ -105,8 +104,8 @@ def test_encoding_safe_stream_handler_replaces_unrepresentable_text():
 
 
 def test_weighted_xgboost_pipeline_and_release_gate(tmp_path):
-    from src.evaluation.quality_gate import validate_release
-    from src.pipelines.auto_pipeline import AutoPipeline
+    from auto_modeling_tool.evaluation.quality_gate import validate_release
+    from auto_modeling_tool.pipelines.auto_pipeline import AutoPipeline
 
     rng = np.random.default_rng(7)
     n_rows = 120
@@ -169,7 +168,7 @@ def test_probability_to_credit_score_contract():
 
 
 def test_export_excel_can_be_disabled(tmp_path):
-    from src.pipelines.auto_pipeline import AutoPipeline
+    from auto_modeling_tool.pipelines.auto_pipeline import AutoPipeline
 
     frame = pl.DataFrame(
         {

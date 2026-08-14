@@ -42,7 +42,7 @@
 | 🔍 **数据质量检查**<br>建模前看清缺失、特殊值、常量列 | `profile_data(df, ...)` | `DataProfileReport` |
 | 🎯 **特征风险评估**<br>一次调用完成分箱 + IV/KS + 跨期 PSI | `profile_risk(df, target=...)` | `RiskProfile` |
 | 🧪 **候选特征筛选**<br>IV / RFE / 相关性 / 互信息多方法筛选 | `FeatureSelector` | 筛选后特征列表 |
-| 🤖 **模型训练**<br>LR / XGBoost / 决策树 + 调参 + 校准 | `src.modeling` | 模型 + 指标 |
+| 🤖 **模型训练**<br>LR / XGBoost / 决策树 + 调参 + 校准 | `auto_modeling_tool.modeling` | 模型 + 指标 |
 | 📡 **特征 / 模型监控**<br>PSI 漂移 + 缺失率 + 分均值 + 中文告警 | `Monitor().monitor(df, ...)` | `MonitoringReport` |
 | 📋 **报告与评分卡交付** | `report.to_markdown()` / `Scorecard` | Markdown / 评分表 |
 
@@ -68,7 +68,7 @@ pip install -r requirements.txt
 
 ```python
 import polars as pl
-from src import profile_risk, Monitor, generate_monitoring_alert
+from auto_modeling_tool import profile_risk, Monitor, generate_monitoring_alert
 
 df = pl.read_parquet("loans.parquet")  # 或 pandas DataFrame，均可直接传入
 
@@ -106,8 +106,8 @@ print(generate_monitoring_alert(report, score_col="model_score",
 低层工具保持 sklearn 风格，可单独使用：
 
 ```python
-from src.binning import WoeBinner
-from src.features import FeatureSelector
+from auto_modeling_tool.binning import WoeBinner
+from auto_modeling_tool.features import FeatureSelector
 
 binner = WoeBinner(n_bins=10, method="quantile", special_values=[-999])
 df_woe = binner.fit_transform(df, target_col="target")
@@ -124,7 +124,7 @@ df_selected = selector.fit_transform(df_woe, target_col="target")
 常规建模只需要修改 `configs/pipeline_config.yaml`：
 
 ```bash
-python -m src.main --config configs/pipeline_config.yaml
+python -m auto_modeling_tool.main --config configs/pipeline_config.yaml
 ```
 
 配置支持：
@@ -188,7 +188,7 @@ Release gate: artifact contract -> driver/feature contract -> report sheet contr
 
 ```
 auto-modeling-tool/
-├── src/
+├── auto_modeling_tool/
 │   ├── analysis/       # 🧭 任务式入口 (profile_data, profile_risk)
 │   ├── monitoring/     # 📡 监控与告警 (Monitor, generate_monitoring_alert)
 │   ├── reports/        # 📋 结构化 Report 对象
@@ -214,11 +214,11 @@ auto-modeling-tool/
 
 | 模块 | 等级 | 说明 |
 |------|------|------|
-| `src.binning` / `src.features` / `src.evaluation` | **Stable** | 接口不做破坏性变更 |
-| `src.analysis` (`profile_data` / `profile_risk`) | **Stable** | 2.1.0 起提供 |
-| `src.reports` | **Stable** | 表结构新增列不视为破坏性变更 |
-| `src.monitoring` | **Experimental** | 告警阈值与文案可能调整 |
-| `src.pipelines` / `src.modeling.tuning` | **Experimental** | 接口可能调整 |
+| `auto_modeling_tool.binning` / `auto_modeling_tool.features` / `auto_modeling_tool.evaluation` | **Stable** | 接口不做破坏性变更 |
+| `auto_modeling_tool.analysis` (`profile_data` / `profile_risk`) | **Stable** | 2.1.0 起提供 |
+| `auto_modeling_tool.reports` | **Stable** | 表结构新增列不视为破坏性变更 |
+| `auto_modeling_tool.monitoring` | **Experimental** | 告警阈值与文案可能调整 |
+| `auto_modeling_tool.pipelines` / `auto_modeling_tool.modeling.tuning` | **Experimental** | 接口可能调整 |
 
 ---
 
@@ -282,7 +282,7 @@ pip install -e ".[shap]"  # SHAP importance
 pytest tests/ -v
 
 # Run with coverage / 运行并生成覆盖率报告
-pytest tests/ --cov=src --cov-report=html
+pytest tests/ --cov=auto_modeling_tool --cov-report=html
 
 # Run workflow & monitoring tests / 运行工作流与监控测试
 pytest tests/test_analysis.py tests/test_monitoring.py -v

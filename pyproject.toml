@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "auto-modeling-tool"
-version = "2.2.0"
+version = "3.0.0"
 description = "High-performance auto-modeling framework built with Polars"
 readme = "README.md"
 license = {text = "MIT"}
@@ -75,10 +75,11 @@ all = [
 ]
 
 [project.scripts]
-automodel = "src.main:main"
+automodel = "auto_modeling_tool.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["auto_modeling_tool*"]
 
 [tool.ruff]
 line-length = 100

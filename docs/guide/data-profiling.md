@@ -6,7 +6,7 @@
 ## 基本用法
 
 ```python
-from src import profile_data
+from auto_modeling_tool import profile_data
 
 report = profile_data(
     df,

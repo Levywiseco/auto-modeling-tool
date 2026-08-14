@@ -7,7 +7,7 @@ Auto Modeling Tool 是一个 Polars 优先的信贷风控建模工具库，覆�
 
 ```python
 import polars as pl
-from src import profile_risk
+from auto_modeling_tool import profile_risk
 
 df = pl.DataFrame({
     "month": ["2026-01"] * 4 + ["2026-02"] * 4 + ["2026-03"] * 4,
@@ -37,7 +37,7 @@ profile.binner                 # 可复用的分箱规则
 
 | 任务 | 入口 | 文档 |
 |------|------|------|
-| 🚀 跑一个完整模型 | `python -m src.main --config ...` | [配置驱动主流程](guide/config-pipeline.md) |
+| 🚀 跑一个完整模型 | `python -m auto_modeling_tool.main --config ...` | [配置驱动主流程](guide/config-pipeline.md) |
 | 🔍 数据质量检查 | `profile_data(df, ...)` | [数据画像](guide/data-profiling.md) |
 | 🎯 特征风险评估 | `profile_risk(df, target=...)` | [分箱与风险评估](guide/binning-risk-evaluation.md) |
 | 🧪 候选特征筛选 | `FeatureSelector` | [特征筛选](guide/feature-selection.md) |
@@ -50,7 +50,7 @@ profile.binner                 # 可复用的分箱规则
 ## 一条命令跑完整条链路
 
 ```bash
-python -m src.main --config configs/pipeline_config.yaml
+python -m auto_modeling_tool.main --config configs/pipeline_config.yaml
 ```
 
 Dev/OOT 防泄漏切分 → 预处理 → WOE 分箱 → 特征筛选 → 建模 → 多页审计报告

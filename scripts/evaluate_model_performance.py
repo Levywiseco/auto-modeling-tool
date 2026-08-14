@@ -3,21 +3,20 @@
 
 import argparse
 import json
-from pathlib import Path
 import sys
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Optional
 
-import numpy as np
 import polars as pl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.data.loaders import load_data
-from src.evaluation.metrics import (
+from auto_modeling_tool.data.loaders import load_data
+from auto_modeling_tool.evaluation.metrics import (
     calculate_all_metrics,
     calculate_regression_metrics,
 )
-from src.reports.excel import write_model_report
+from auto_modeling_tool.reports.excel import write_model_report
 
 
 def _evaluate_frame(
@@ -29,7 +28,7 @@ def _evaluate_frame(
     threshold: float,
     weight_col: Optional[str],
     use_sample_weight: bool,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     y_true = frame.get_column(target_col).to_numpy()
     score = frame.get_column(score_col).to_numpy()
     weights = (
@@ -81,7 +80,7 @@ def main() -> int:
     if missing:
         raise ValueError(f"Score file is missing required columns: {missing}")
 
-    groups: Dict[str, pl.DataFrame] = {"all": frame}
+    groups: dict[str, pl.DataFrame] = {"all": frame}
     if args.sample_column:
         if args.sample_column not in frame.columns:
             raise ValueError(f"Sample column '{args.sample_column}' not found")
@@ -92,7 +91,7 @@ def main() -> int:
         if any(len(group) == 0 for group in groups.values()):
             raise ValueError("Both Dev and OOT groups must contain rows")
 
-    metrics: Dict[str, Any] = {}
+    metrics: dict[str, Any] = {}
     for name, group in groups.items():
         values = _evaluate_frame(
             group,

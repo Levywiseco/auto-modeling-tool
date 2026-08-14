@@ -38,7 +38,7 @@ pip install -e ".[excel]"   # Excel 读写
 ## 验证安装
 
 ```bash
-python -c "import src; print(src.__version__)"
+python -c "import auto_modeling_tool; print(auto_modeling_tool.__version__)"
 pytest tests/ -q
 ```
 

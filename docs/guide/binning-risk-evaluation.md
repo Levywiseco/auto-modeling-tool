@@ -7,7 +7,7 @@
 ## 基本用法
 
 ```python
-from src import profile_risk
+from auto_modeling_tool import profile_risk
 
 profile = profile_risk(
     df,
@@ -56,7 +56,7 @@ profile.report.trend_tables["bad_rate"]      # 每月样本量与坏率
 X_woe = profile.binner.transform(new_df, return_type="woe")
 
 # 2. 传给监控，保证开发期与监控期口径一致
-from src import Monitor
+from auto_modeling_tool import Monitor
 Monitor().monitor(prod_df, features=profile.features,
                   binner=profile.binner, group_col="score_month")
 ```

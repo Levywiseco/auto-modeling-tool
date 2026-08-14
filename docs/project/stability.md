@@ -4,17 +4,17 @@
 
 | 模块 | 等级 | 承诺 |
 |------|------|------|
-| `src.binning` | **Stable** | 接口不做破坏性变更 |
-| `src.features` | **Stable** | 同上 |
-| `src.evaluation` | **Stable** | 同上 |
-| `src.analysis`（`profile_data` / `profile_risk`） | **Stable** | 2.1.0 起提供 |
-| `src.reports` | **Stable** | 表**新增列**不视为破坏性变更 |
-| `src.monitoring` | **Experimental** | 告警阈值、文案、summary 列可能调整 |
-| `src.pipelines` | **Experimental** | 接口可能调整 |
-| `src.modeling.tuning` / `calibration` | **Experimental** | 接口可能调整 |
-| `src.config`（YAML schema） | **Experimental** | 2.2.0 起提供；字段名可能调整，旧键保留别名 |
-| `src.modeling.artifact` | **Experimental** | 2.2.0 起提供；artifact 格式带 `artifact_version` |
-| `src.evaluation.quality_gate` | **Experimental** | 2.2.0 起提供；检查项可能增加 |
+| `auto_modeling_tool.binning` | **Stable** | 接口不做破坏性变更 |
+| `auto_modeling_tool.features` | **Stable** | 同上 |
+| `auto_modeling_tool.evaluation` | **Stable** | 同上 |
+| `auto_modeling_tool.analysis`（`profile_data` / `profile_risk`） | **Stable** | 2.1.0 起提供 |
+| `auto_modeling_tool.reports` | **Stable** | 表**新增列**不视为破坏性变更 |
+| `auto_modeling_tool.monitoring` | **Experimental** | 告警阈值、文案、summary 列可能调整 |
+| `auto_modeling_tool.pipelines` | **Experimental** | 接口可能调整 |
+| `auto_modeling_tool.modeling.tuning` / `calibration`<br>`auto_modeling_tool.evaluation.cross_validation` | **Experimental**<br>未接入流水线 | 只能直接 import 使用；`auto_pipeline` 不调用它们，`ModelTrainer` 另有一套私有调参实现 |
+| `auto_modeling_tool.config`（YAML schema） | **Experimental** | 2.2.0 起提供；字段名可能调整，旧键保留别名 |
+| `auto_modeling_tool.modeling.artifact` | **Experimental** | 2.2.0 起提供；artifact 格式带 `artifact_version` |
+| `auto_modeling_tool.evaluation.quality_gate` | **Experimental** | 2.2.0 起提供；检查项可能增加 |
 
 ## 兼容性约定
 

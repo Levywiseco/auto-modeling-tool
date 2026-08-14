@@ -1,6 +1,6 @@
 # CLI 与脚本参考
 
-## `python -m src.main`
+## `python -m auto_modeling_tool.main`
 
 主流水线入口。也可以用安装后的 `automodel` 命令。
 

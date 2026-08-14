@@ -19,13 +19,13 @@ modeling:
 ```
 
 ```bash
-python -m src.main --config configs/pipeline_config.yaml
+python -m auto_modeling_tool.main --config configs/pipeline_config.yaml
 ```
 
 或者纯命令行：
 
 ```bash
-python -m src.main --input data.csv --target loss_amount \
+python -m auto_modeling_tool.main --input data.csv --target loss_amount \
   --target-mode regression --model xgboost --target-transform log1p
 ```
 
@@ -55,7 +55,7 @@ python -m src.main --input data.csv --target loss_amount \
 ## Python 里用
 
 ```python
-from src.pipelines.regression_pipeline import RegressionPipeline
+from auto_modeling_tool.pipelines.regression_pipeline import RegressionPipeline
 
 pipeline = RegressionPipeline(
     target_col="loss_amount",
@@ -76,7 +76,7 @@ preds = pipeline.predict(new_df)     # 已逆变换的预测值
 一步到位的函数式入口：
 
 ```python
-from src.pipelines.regression_pipeline import run_regression_pipeline
+from auto_modeling_tool.pipelines.regression_pipeline import run_regression_pipeline
 
 result = run_regression_pipeline(
     "data.csv",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for task-oriented workflow entry points (profile_data / profile_risk).
 """
@@ -7,8 +6,8 @@ import numpy as np
 import polars as pl
 import pytest
 
-from src.analysis import profile_data, profile_risk
-from src.reports import DataProfileReport, RiskProfile
+from auto_modeling_tool.analysis import profile_data, profile_risk
+from auto_modeling_tool.reports import DataProfileReport, RiskProfile
 
 
 @pytest.fixture
@@ -145,6 +144,6 @@ class TestProfileRisk:
         assert "target" not in profile.features
 
     def test_missing_target_raises(self, risk_data):
-        from src.core.exceptions import ValidationError
+        from auto_modeling_tool.core.exceptions import ValidationError
         with pytest.raises(ValidationError):
             profile_risk(risk_data, target="nonexistent")

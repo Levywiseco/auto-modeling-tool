@@ -5,7 +5,7 @@
 ## 基本用法
 
 ```python
-from src.features import FeatureSelector
+from auto_modeling_tool.features import FeatureSelector
 
 selector = FeatureSelector(method="iv", iv_threshold=0.02)
 df_selected = selector.fit_transform(df_woe, target_col="target")
@@ -32,7 +32,7 @@ stable = profile.summary_table.filter(
 )["feature"].to_list()
 
 # 2. 在稳定特征里去共线性
-from src.features import remove_multicollinearity
+from auto_modeling_tool.features import remove_multicollinearity
 final_feats = remove_multicollinearity(df.select(stable), threshold=0.8)
 ```
 

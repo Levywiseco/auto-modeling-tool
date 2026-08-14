@@ -2,16 +2,16 @@
 """Score raw driver data with a saved scoring artifact."""
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import polars as pl
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.data.loaders import load_data
-from src.modeling.artifact import load_scoring_artifact, score_with_artifact
-from src.modeling.scorecard import probability_to_credit_score
+from auto_modeling_tool.data.loaders import load_data
+from auto_modeling_tool.modeling.artifact import load_scoring_artifact, score_with_artifact
+from auto_modeling_tool.modeling.scorecard import probability_to_credit_score
 
 
 def main() -> int:
