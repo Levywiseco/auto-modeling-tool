@@ -517,6 +517,10 @@ class AutoPipeline:
                     actual_weight=self._weight_oot,
                 )
                 tables["Score_PSI"] = psi_table
+                # Surface PSI as a metric so it reaches the scoring artifact and
+                # the release gate's --max-psi threshold can actually read it.
+                if isinstance(self.metrics_, dict):
+                    self.metrics_["score_psi"] = psi
                 tables["Stability_Summary"] = {
                     "score_psi_dev_oot": psi,
                     "status": (

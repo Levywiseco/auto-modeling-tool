@@ -1,7 +1,9 @@
 """Regression tests for the Dev/OOT and scoring contracts."""
 
+import joblib
 import numpy as np
 import polars as pl
+import pytest
 from sklearn.linear_model import LogisticRegression
 
 from auto_modeling_tool.binning.woe_binning import WoeBinner
@@ -142,16 +144,37 @@ def test_weighted_xgboost_pipeline_and_release_gate(tmp_path):
     )
     metrics = pipeline.evaluate()
     assert "auc_roc" in metrics
+    # Dev/OOT score PSI must be a metric, not just a report table: the release
+    # gate reads it from the artifact, so --max-psi is inert without it.
+    assert "score_psi" in metrics
 
     output_dir = pipeline.save(tmp_path)
     report_path = next(tmp_path.glob("Model_Report_*.xlsx"))
     assert (output_dir / "scoring_artifact.pkl").exists()
+
+    artifact = joblib.load(output_dir / "scoring_artifact.pkl")
+    assert artifact["metadata"]["metrics"]["score_psi"] == pytest.approx(
+        metrics["score_psi"]
+    )
+
+    # A ceiling this loose always clears; the point is that the gate reads a
+    # real number. 120 rows give a naturally large Dev/OOT PSI.
     result = validate_release(
         output_dir,
         report_path=report_path,
         min_auc=0.5,
+        max_psi=10.0,
     )
     assert result.passed
+    psi_check = next(c for c in result.checks if c.name == "max_psi")
+    assert "psi=None" not in psi_check.detail
+
+    # An unreachable PSI ceiling must fail the gate rather than pass silently.
+    strict = validate_release(output_dir, report_path=report_path, max_psi=-1.0)
+    assert not strict.passed
+    assert any(
+        check.name == "max_psi" and not check.passed for check in strict.checks
+    )
 
 
 def test_probability_to_credit_score_contract():

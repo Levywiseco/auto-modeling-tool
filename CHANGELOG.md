@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.1] - 2026-08-14
+
+### Fixed
+
+- Dev/OOT score PSI was computed for the report but never added to `metrics_`,
+  so it never reached `scoring_artifact.pkl`. `validate_release(..., max_psi=)`
+  and `scripts/validate_release.py --max-psi` therefore always read `psi=None`
+  and failed the check — the threshold was inert. PSI is now a metric like any
+  other, and the pipeline contract test asserts it survives into the artifact.
+
 ## [3.0.0] - 2026-08-14
 
 Packaging and code-quality pass. The only breaking change is the import name.
