@@ -166,3 +166,33 @@ def test_probability_to_credit_score_contract():
     np.testing.assert_allclose(scores[0], 500.0, atol=1e-8)
     assert scores[1] > scores[0] > scores[2]
     assert np.all((scores >= 300) & (scores <= 900))
+
+
+def test_export_excel_can_be_disabled(tmp_path):
+    from src.pipelines.auto_pipeline import AutoPipeline
+
+    frame = pl.DataFrame(
+        {
+            "feature": list(range(20)),
+            "target": [int(index >= 10) for index in range(20)],
+            "sample": ["dev"] * 14 + ["oot"] * 6,
+        }
+    )
+    pipeline = AutoPipeline(
+        target_col="target",
+        n_bins=2,
+        n_features=1,
+        export_excel=False,
+    )
+    pipeline.fit(
+        frame,
+        sample_col="sample",
+        export_excel=False,
+        min_samples_bin=2,
+    )
+    pipeline.evaluate()
+    pipeline.save(tmp_path)
+
+    assert (tmp_path / "scoring_artifact.pkl").exists()
+    assert not list(tmp_path.glob("Model_Report_*.xlsx"))
+
