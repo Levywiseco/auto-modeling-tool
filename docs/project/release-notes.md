@@ -1,5 +1,14 @@
 # Release Notes
 
+## 3.0.1（2026-08-14）
+
+### 修复
+
+- Dev/OOT 分数 PSI 只进了报告表格，没有写入 `metrics_`，因而没能进入
+  `scoring_artifact.pkl`。发布门禁的 `--max-psi` 读到的永远是 `psi=None` 并
+  判定失败——这个阈值实际上是失效的。现在 PSI 与其他指标一样落进 artifact，
+  流水线契约测试会断言它不丢。
+
 ## 2.2.0（2026-08-14）
 
 对齐 `USER_GUIDE 0.75` 的生产化加固：防泄漏的 Dev/OOT 建模、配置驱动、
