@@ -180,6 +180,7 @@ def calculate_lift(
         pl.col("score").qcut(
             n_bins,
             labels=[str(i) for i in range(n_bins)],
+            allow_duplicates=True,
         ).alias("bin")
     )
     overall_bad_rate = float(

@@ -107,3 +107,50 @@ modeling:
     assert kwargs["target_mode"] == "regression"
     assert kwargs["model_type"] == "linear"
     assert kwargs["target_transform"] == "log1p"
+
+
+def test_configured_pipeline_runs_with_scoring_defaults(tmp_path: Path):
+    import polars as pl
+
+    from src.main import run_configured_pipeline
+
+    data_path = tmp_path / "data.csv"
+    frame = pl.DataFrame(
+        {
+            "x": list(range(40)),
+            "target": [int((index % 20) >= 10) for index in range(40)],
+            "sample": (["dev"] * 24) + (["oot"] * 16),
+        }
+    )
+    frame.write_csv(data_path)
+    config_path = tmp_path / "pipeline.yaml"
+    config_path.write_text(
+        f"""
+shared:
+  target_mode: classification
+  bad_col: target
+  sample_col: sample
+data:
+  path: {data_path.as_posix()}
+output:
+  dir: output
+binning:
+  n_bins: 2
+  min_samples_bin: 2
+feature_screening:
+  method: iv
+  n_features: 1
+modeling:
+  algorithm: logistic
+evaluation:
+  export_excel: true
+scoring:
+  convert_to_credit_score: false
+""",
+        encoding="utf-8",
+    )
+
+    result = run_configured_pipeline(str(config_path))
+    assert result["metrics"]
+    assert (tmp_path / "output" / "scoring_artifact.pkl").exists()
+    assert list((tmp_path / "output").glob("Model_Report_*.xlsx"))

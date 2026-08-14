@@ -51,3 +51,8 @@ evaluation:
 
 scoring:
   convert_to_credit_score: false
+  credit_score_col: pred_score
+  base_score: 500
+  pdo: 50
+  min_score: 300
+  max_score: 900

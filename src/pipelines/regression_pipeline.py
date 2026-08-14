@@ -56,6 +56,7 @@ class RegressionPipeline:
         early_stopping_metric: Optional[str] = None,
         clean_strategy: str = "median",
         normalize_method: Optional[str] = "zscore",
+        export_excel: bool = True,
     ):
         self.target_col = target_col
         self.model_type = model_type
@@ -73,6 +74,7 @@ class RegressionPipeline:
         self.early_stopping_metric = early_stopping_metric
         self.clean_strategy = clean_strategy
         self.normalize_method = normalize_method
+        self.export_excel = bool(export_excel)
 
         self.preprocessor_: Optional[DataPreprocessor] = None
         self.model_: Optional[ModelTrainer] = None
@@ -84,6 +86,7 @@ class RegressionPipeline:
         self._oot_weight: Optional[np.ndarray] = None
 
     def fit(self, data: Union[str, Path, pl.DataFrame], **kwargs) -> "RegressionPipeline":
+        self.export_excel = bool(kwargs.get("export_excel", self.export_excel))
         if isinstance(data, (str, Path)):
             load_kwargs = {}
             if kwargs.get("encoding") and Path(data).suffix.lower() == ".csv":
@@ -307,27 +310,29 @@ class RegressionPipeline:
                 "preprocessor": self.preprocessor_,
                 "model": self.model_,
                 "target_transform": self.target_transform,
+                "export_excel": self.export_excel,
                 "metrics": self.metrics_,
                 "scoring_artifact": artifact,
             },
             output / "pipeline.pkl",
         )
         joblib.dump(artifact, output / "scoring_artifact.pkl")
-        from ..reports.excel import write_model_report
-        write_model_report(
-            output,
-            self.metrics_ or {},
-            metadata={
-                "target_col": self.target_col,
-                "task": "regression",
-                "artifact_version": "1.0",
-                "split_strategy": self.split_.strategy if self.split_ else None,
-                "target_transform": self.target_transform,
-                "model_type": self.model_type,
-                "early_stopping_eval": self.early_stopping_eval,
-                "early_stopping_rounds": self.early_stopping_rounds,
-            },
-        )
+        if self.export_excel:
+            from ..reports.excel import write_model_report
+            write_model_report(
+                output,
+                self.metrics_ or {},
+                metadata={
+                    "target_col": self.target_col,
+                    "task": "regression",
+                    "artifact_version": "1.0",
+                    "split_strategy": self.split_.strategy if self.split_ else None,
+                    "target_transform": self.target_transform,
+                    "model_type": self.model_type,
+                    "early_stopping_eval": self.early_stopping_eval,
+                    "early_stopping_rounds": self.early_stopping_rounds,
+                },
+            )
         return output
 
     @classmethod
@@ -342,6 +347,7 @@ class RegressionPipeline:
             early_stopping_rounds=data.get("early_stopping_rounds"),
             early_stopping_metric=data.get("early_stopping_metric"),
             target_transform=data.get("target_transform"),
+            export_excel=data.get("export_excel", True),
         )
         pipeline.feature_columns_ = data["feature_columns"]
         pipeline.preprocessor_ = data["preprocessor"]
@@ -361,3 +367,4 @@ def run_regression_pipeline(
     metrics = pipeline.evaluate()
     pipeline.save(output_dir)
     return {"pipeline": pipeline, "metrics": metrics, "output_path": Path(output_dir)}
+

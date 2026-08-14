@@ -134,6 +134,7 @@ python -m src.main --config configs/pipeline_config.yaml
 - `modeling.algorithm`: `logistic`、`tree`、`random_forest`、`xgboost`、`lightgbm`
 - `modeling.early_stopping_eval`: `none`、`dev_holdout` 或显式配置的 `oot`
 - `evaluation.segment_cols`、`temporal_col`、`benchmark_cols`: 输出分群、跨期和基准对比
+- `scoring.convert_to_credit_score`: 按 `base_score`、`pdo` 和分数上下限输出可解释的信用分
 - 输出包括 `scoring_artifact.pkl`、`pipeline.pkl`、多页 `Model_Report_N.xlsx`
 
 独立工具：
@@ -144,6 +145,8 @@ python scripts/evaluate_model_performance.py --input scored.csv --target target 
 python scripts/explore_dataset.py --input data.csv --target target --sample-column sample --output eda.xlsx
 python scripts/validate_release.py --model-dir output --report output/Model_Report_1.xlsx
 ```
+
+分类模型的评分结果包含 `pred_proba`（正类概率）和兼容列 `prediction`；回归模型输出 `pred_value`。如需同时输出信用分，可在配置中启用 `scoring.convert_to_credit_score: true`，或在命令行增加 `--convert-to-credit-score`，结果列名默认为 `pred_score`。
 
 ```text
 Release gate: artifact contract -> driver/feature contract -> report sheet contract
@@ -310,3 +313,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Made with ❤️ by [Levywiseco](https://github.com/Levywiseco)
 
 </div>
+

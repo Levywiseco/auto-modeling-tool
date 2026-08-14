@@ -45,6 +45,12 @@ def run_modeling_pipeline(
     temporal_col: Optional[str] = None,
     benchmark_cols: Optional[list[str]] = None,
     export_excel: bool = True,
+    convert_to_credit_score: bool = False,
+    credit_score_col: str = "pred_score",
+    base_score: float = 500.0,
+    pdo: float = 50.0,
+    min_score: float = 300.0,
+    max_score: float = 900.0,
     data_encoding: str = "utf-8",
 ) -> Dict[str, Any]:
     """Run the classification or regression pipeline selected by config."""
@@ -57,8 +63,6 @@ def run_modeling_pipeline(
         "oot_start": oot_start,
         "dev_label": dev_label,
         "oot_label": oot_label,
-        "clean_strategy": clean_strategy,
-        "normalize_method": normalize_method,
     }
     fit_kwargs = {
         "sample_col": sample_col,
@@ -82,6 +86,8 @@ def run_modeling_pipeline(
     }
 
     if target_mode == "regression":
+        if convert_to_credit_score:
+            raise ValueError("convert_to_credit_score is only supported for classification")
         from .pipelines.regression_pipeline import RegressionPipeline
 
         pipeline = RegressionPipeline(
@@ -91,6 +97,8 @@ def run_modeling_pipeline(
             early_stopping_eval=early_stopping_eval,
             early_stopping_rounds=early_stopping_rounds,
             early_stopping_metric=early_stopping_metric,
+            clean_strategy=clean_strategy,
+            normalize_method=normalize_method,
             **common,
         )
         pipeline.fit(data_path, **fit_kwargs)
@@ -113,6 +121,12 @@ def run_modeling_pipeline(
         early_stopping_eval=early_stopping_eval,
         early_stopping_rounds=early_stopping_rounds,
         early_stopping_metric=early_stopping_metric,
+        convert_to_credit_score=convert_to_credit_score,
+        credit_score_col=credit_score_col,
+        base_score=base_score,
+        pdo=pdo,
+        min_score=min_score,
+        max_score=max_score,
         n_bins=n_bins,
         binning_method=binning_method,
         selection_method=selection_method,
@@ -177,6 +191,12 @@ def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
         "temporal_col": args.temporal_column,
         "benchmark_cols": args.benchmark_column,
         "data_encoding": args.encoding,
+        "convert_to_credit_score": args.convert_to_credit_score,
+        "credit_score_col": args.credit_score_col,
+        "base_score": args.base_score,
+        "pdo": args.pdo,
+        "min_score": args.min_score,
+        "max_score": args.max_score,
     }
     return {key: value for key, value in values.items() if value is not None}
 
@@ -225,6 +245,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--temporal-column")
     parser.add_argument("--benchmark-column", action="append")
     parser.add_argument("--encoding")
+    parser.add_argument("--convert-to-credit-score", action="store_true", default=None)
+    parser.add_argument("--credit-score-col")
+    parser.add_argument("--base-score", type=float)
+    parser.add_argument("--pdo", type=float)
+    parser.add_argument("--min-score", type=float)
+    parser.add_argument("--max-score", type=float)
     parser.add_argument(
         "--exclude-column",
         action="append",
