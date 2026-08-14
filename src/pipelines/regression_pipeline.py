@@ -81,6 +81,7 @@ class RegressionPipeline:
         self.split_: Optional[DatasetSplit] = None
         self._X_oot_raw: Optional[pl.DataFrame] = None
         self._y_oot: Optional[pl.Series] = None
+        self._oot_weight: Optional[np.ndarray] = None
 
     def fit(self, data: Union[str, Path, pl.DataFrame], **kwargs) -> "RegressionPipeline":
         if isinstance(data, (str, Path)):
@@ -159,9 +160,19 @@ class RegressionPipeline:
         X_oot = self.preprocessor_.transform(X_oot_raw)
 
         sample_weight = None
+        oot_weight = None
         if weight_col:
+            if weight_col not in dev.columns or weight_col not in oot.columns:
+                raise ValidationError(f"Weight column '{weight_col}' not found in Dev/OOT data")
             sample_weight = dev.get_column(weight_col).cast(pl.Float64).to_numpy()
-            if not np.isfinite(sample_weight).all() or (sample_weight <= 0).any():
+            oot_weight = oot.get_column(weight_col).cast(pl.Float64).to_numpy()
+            self._oot_weight = oot_weight
+            if (
+                not np.isfinite(sample_weight).all()
+                or (sample_weight <= 0).any()
+                or not np.isfinite(oot_weight).all()
+                or (oot_weight <= 0).any()
+            ):
                 raise ValidationError("Sample weights must be finite and strictly positive")
 
         fit_x = X_dev.to_numpy()
@@ -185,11 +196,7 @@ class RegressionPipeline:
             if early_eval == "oot":
                 eval_x = X_oot.to_numpy()
                 eval_y = self._y_oot.to_numpy()
-                eval_weight = (
-                    sample_weight
-                    if sample_weight is not None
-                    else None
-                )
+                eval_weight = oot_weight
             else:
                 indices = np.arange(len(y_fit))
                 fit_idx, eval_idx = train_test_split(
@@ -254,7 +261,11 @@ class RegressionPipeline:
         if X_oot is None or y_oot is None:
             raise ValidationError("No OOT data is available for evaluation")
         predictions = self._predict_raw(X_oot)
-        self.metrics_ = calculate_regression_metrics(y_oot, predictions)
+        self.metrics_ = calculate_regression_metrics(
+            y_oot,
+            predictions,
+            sample_weight=self._oot_weight,
+        )
         return self.metrics_
 
     def predict(self, X: pl.DataFrame) -> np.ndarray:
