@@ -72,6 +72,7 @@ class AutoPipeline:
         pdo: float = 50.0,
         min_score: float = 300.0,
         max_score: float = 900.0,
+        export_excel: bool = True,
     ):
         self.target_col = target_col
         self.test_size = test_size
@@ -96,6 +97,7 @@ class AutoPipeline:
         self.pdo = float(pdo)
         self.min_score = float(min_score)
         self.max_score = float(max_score)
+        self.export_excel = bool(export_excel)
 
         self.preprocessor_: Optional[DataPreprocessor] = None
         self.binner_: Optional[WoeBinner] = None
@@ -136,6 +138,7 @@ class AutoPipeline:
         logger.info("=" * 60)
         logger.info("🚀 Starting AutoPipeline Training")
         logger.info("=" * 60)
+        self.export_excel = bool(kwargs.get("export_excel", self.export_excel))
 
         if isinstance(data, (str, Path)):
             load_kwargs = {}
@@ -689,6 +692,7 @@ class AutoPipeline:
             "pdo": self.pdo,
             "min_score": self.min_score,
             "max_score": self.max_score,
+            "export_excel": self.export_excel,
             "weight_col": self.weight_col_,
             "use_sample_weight": self.use_sample_weight_,
             "preprocessor": self.preprocessor_,
@@ -717,21 +721,22 @@ class AutoPipeline:
                 feature_importance=self.feature_importance_,
                 output_dir=output_path,
             )
-        from ..reports.excel import write_model_report
-        write_model_report(
-            output_path,
-            self.metrics_ or {},
-            feature_importance=self.feature_importance_,
-            metadata={
-                "target_col": self.target_col,
-                "artifact_version": "1.1",
-                "split_strategy": self.split_.strategy if self.split_ else None,
-                "model_type": self.model_type,
-                "selected_features": self.selected_features_,
-                "use_sample_weight": self.use_sample_weight_,
-            },
-            tables=self.report_tables_,
-        )
+        if self.export_excel:
+            from ..reports.excel import write_model_report
+            write_model_report(
+                output_path,
+                self.metrics_ or {},
+                feature_importance=self.feature_importance_,
+                metadata={
+                    "target_col": self.target_col,
+                    "artifact_version": "1.1",
+                    "split_strategy": self.split_.strategy if self.split_ else None,
+                    "model_type": self.model_type,
+                    "selected_features": self.selected_features_,
+                    "use_sample_weight": self.use_sample_weight_,
+                },
+                tables=self.report_tables_,
+            )
         logger.info(f"Pipeline saved to {output_path}")
         return output_path
 
@@ -766,6 +771,7 @@ class AutoPipeline:
             pdo=data.get("pdo", 50.0),
             min_score=data.get("min_score", 300.0),
             max_score=data.get("max_score", 900.0),
+            export_excel=data.get("export_excel", True),
         )
         pipeline.preprocessor_ = data["preprocessor"]
         pipeline.binner_ = data["binner"]
@@ -812,3 +818,4 @@ def run_pipeline(
         "output_path": Path(output_dir),
         "pipeline": pipeline,
     }
+
