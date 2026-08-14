@@ -115,6 +115,7 @@ class WoeBinner(MarsTransformer):
         # Cache for WOE computation
         self._cache_X: Optional[pl.DataFrame] = None
         self._cache_y: Optional[pl.Series] = None
+        self._cache_sample_weight: Optional[np.ndarray] = None
     
     @time_it
     def _fit_impl(self, X: pl.DataFrame, y: Optional[pl.Series] = None, **kwargs) -> None:
@@ -124,8 +125,13 @@ class WoeBinner(MarsTransformer):
         if len(X) != len(y):
             raise ValidationError("X and y must contain the same number of rows")
 
+        sample_weight = self._validate_sample_weight(
+            kwargs.get("sample_weight"),
+            len(X),
+        )
         self._cache_X = X
         self._cache_y = y
+        self._cache_sample_weight = sample_weight
         target_cols = self.features if self.features else X.columns
         numeric_cols = [
             column for column in target_cols
@@ -171,13 +177,13 @@ class WoeBinner(MarsTransformer):
             return
 
         self._generate_mappings()
-        self._calculate_woe(X, y)
+        self._calculate_woe(X, y, sample_weight)
         if self.monotonic:
-            self._enforce_monotonic_woe(X, y)
+            self._enforce_monotonic_woe(X, y, sample_weight)
 
         logger.info(
             f"✅ Binning complete. Numeric={len(valid_numeric)}, "
-            f"Categorical={len(categorical_cols)}"
+            f"Categorical={len(categorical_cols)}, weighted={sample_weight is not None}"
         )
 
     def _fit_categorical(self, X: pl.DataFrame, cols: List[str]) -> None:
@@ -441,77 +447,84 @@ class WoeBinner(MarsTransformer):
                     mapping.setdefault(bin_idx, f"{bin_idx:02d}_{value}")
             self.bin_mappings_[col] = mapping
 
-    def _calculate_woe(self, X: pl.DataFrame, y: pl.Series) -> None:
-        """
-        Calculate WOE values using Polars matrix aggregation.
-        
-        Optimization: Uses unpivot aggregation for single-scan computation
-        across all features simultaneously.
-        """
-        # First transform to get bin indices
+    def _calculate_woe(
+        self,
+        X: pl.DataFrame,
+        y: pl.Series,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
+        """Calculate weighted WOE/IV values for every fitted feature."""
         X_binned = self._transform_impl(X, return_type="index")
-        
-        y_np = y.to_numpy()
-        total_bad = y_np.sum()
-        total_good = len(y_np) - total_bad
-        
-        if total_bad == 0 or total_good == 0:
+        y_np = np.asarray(y.to_numpy(), dtype=float)
+        weights = self._validate_sample_weight(sample_weight, len(y_np))
+        total_bad = float(np.sum(weights * y_np))
+        total_good = float(np.sum(weights * (1.0 - y_np)))
+
+        if total_bad <= 0 or total_good <= 0:
             logger.warning("Target has only one class, WOE cannot be calculated")
             return
-        
-        # Calculate WOE for each feature
+
         for col in self.fitted_features_:
             bin_col = f"{col}_bin"
             if bin_col not in X_binned.columns:
                 continue
-            
-            # Aggregate by bin
+
             stats = (
                 pl.DataFrame({
                     "bin": X_binned[bin_col],
-                    "target": y
+                    "target": y,
+                    "weight": weights,
                 })
+                .with_columns([
+                    (pl.col("target") * pl.col("weight")).alias("bad_weight"),
+                    ((1.0 - pl.col("target")) * pl.col("weight")).alias("good_weight"),
+                ])
                 .group_by("bin")
                 .agg([
-                    pl.len().alias("count"),
-                    pl.col("target").sum().alias("bad"),
-                ])
-                .with_columns([
-                    (pl.col("count") - pl.col("bad")).alias("good")
+                    pl.col("weight").sum().alias("count"),
+                    pl.col("bad_weight").sum().alias("bad"),
+                    pl.col("good_weight").sum().alias("good"),
                 ])
             )
-            
-            woe_dict = {}
-            iv_dict = {}
+
+            woe_dict: Dict[int, float] = {}
+            iv_dict: Dict[int, float] = {}
             total_iv = 0.0
-            
+
             for row in stats.iter_rows(named=True):
                 bin_idx = row["bin"]
-                bad = row["bad"]
-                good = row["good"]
-                
-                # Calculate distributions with smoothing
-                dist_bad = (bad + self.smoothing) / (total_bad + self.smoothing * 2)
-                dist_good = (good + self.smoothing) / (total_good + self.smoothing * 2)
-                
-                woe = np.log(dist_bad / dist_good)
-                iv = (dist_bad - dist_good) * woe
-                
+                bad = float(row["bad"])
+                good = float(row["good"])
+                dist_bad = (bad + self.smoothing) / (
+                    total_bad + self.smoothing * 2
+                )
+                dist_good = (good + self.smoothing) / (
+                    total_good + self.smoothing * 2
+                )
+                woe = float(np.log(dist_bad / dist_good))
+                iv = float((dist_bad - dist_good) * woe)
                 woe_dict[bin_idx] = woe
                 iv_dict[bin_idx] = iv
                 total_iv += iv
-            
+
             self.bin_woes_[col] = woe_dict
             self.bin_ivs_[col] = iv_dict
             self.total_iv_[col] = total_iv
-    
-    def _enforce_monotonic_woe(self, X: pl.DataFrame, y: pl.Series) -> None:
+
+    def _enforce_monotonic_woe(
+        self,
+        X: pl.DataFrame,
+        y: pl.Series,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
         """Apply an isotonic/PAVA-style monotonic calibration to numeric bins."""
         from sklearn.isotonic import IsotonicRegression
 
         indexed = self._transform_impl(X, return_type="index")
-        total_bad = float(y.sum())
-        total_good = float(len(y) - total_bad)
+        y_np = np.asarray(y.to_numpy(), dtype=float)
+        weights = self._validate_sample_weight(sample_weight, len(y_np))
+        total_bad = float(np.sum(weights * y_np))
+        total_good = float(np.sum(weights * (1.0 - y_np)))
         if total_bad <= 0 or total_good <= 0:
             return
 
@@ -520,13 +533,23 @@ class WoeBinner(MarsTransformer):
             if bin_col not in indexed.columns:
                 continue
             stats = (
-                pl.DataFrame({"bin": indexed[bin_col], "target": y})
+                pl.DataFrame({
+                    "bin": indexed[bin_col],
+                    "target": y,
+                    "weight": weights,
+                })
                 .filter(pl.col("bin") >= 0)
+                .with_columns(
+                    (pl.col("target") * pl.col("weight")).alias("bad_weight")
+                )
                 .group_by("bin")
                 .agg([
-                    pl.len().alias("count"),
-                    pl.col("target").mean().alias("bad_rate"),
+                    pl.col("weight").sum().alias("count"),
+                    pl.col("bad_weight").sum().alias("bad"),
                 ])
+                .with_columns(
+                    (pl.col("bad") / pl.col("count")).alias("bad_rate")
+                )
                 .sort("bin")
             )
             if len(stats) < 2:
@@ -534,29 +557,58 @@ class WoeBinner(MarsTransformer):
 
             x_values = stats["bin"].to_numpy().astype(float)
             rates = stats["bad_rate"].to_numpy().astype(float)
-            increasing = IsotonicRegression(increasing=True, out_of_bounds="clip").fit_transform(
-                x_values, rates
+            increasing = IsotonicRegression(
+                increasing=True, out_of_bounds="clip"
+            ).fit_transform(x_values, rates)
+            decreasing = IsotonicRegression(
+                increasing=False, out_of_bounds="clip"
+            ).fit_transform(x_values, rates)
+            fitted = (
+                increasing
+                if np.sum((increasing - rates) ** 2)
+                <= np.sum((decreasing - rates) ** 2)
+                else decreasing
             )
-            decreasing = IsotonicRegression(increasing=False, out_of_bounds="clip").fit_transform(
-                x_values, rates
-            )
-            fitted = increasing if np.sum((increasing - rates) ** 2) <= np.sum((decreasing - rates) ** 2) else decreasing
             counts = stats["count"].to_numpy().astype(float)
 
             updated = dict(self.bin_woes_.get(column, {}))
             iv_total = 0.0
-            for bin_idx, count, bad_rate in zip(x_values.astype(int), counts, fitted):
+            for bin_idx, count, bad_rate in zip(
+                x_values.astype(int), counts, fitted
+            ):
                 clipped_rate = float(np.clip(bad_rate, 1e-7, 1 - 1e-7))
                 bad = clipped_rate * count
-                good = (1 - clipped_rate) * count
-                dist_bad = (bad + self.smoothing) / (total_bad + self.smoothing * 2)
-                dist_good = (good + self.smoothing) / (total_good + self.smoothing * 2)
+                good = (1.0 - clipped_rate) * count
+                dist_bad = (bad + self.smoothing) / (
+                    total_bad + self.smoothing * 2
+                )
+                dist_good = (good + self.smoothing) / (
+                    total_good + self.smoothing * 2
+                )
                 woe = float(np.log(dist_bad / dist_good))
                 iv = float((dist_bad - dist_good) * woe)
                 updated[bin_idx] = woe
                 iv_total += iv
             self.bin_woes_[column] = updated
             self.total_iv_[column] = iv_total
+
+    @staticmethod
+    def _validate_sample_weight(
+        sample_weight: Optional[Any],
+        n_rows: int,
+    ) -> np.ndarray:
+        if sample_weight is None:
+            return np.ones(n_rows, dtype=float)
+        if isinstance(sample_weight, pl.Series):
+            values = sample_weight.to_numpy()
+        else:
+            values = np.asarray(sample_weight)
+        if len(values) != n_rows:
+            raise ValidationError("sample_weight must have the same length as X")
+        values = values.astype(float)
+        if not np.isfinite(values).all() or (values <= 0).any():
+            raise ValidationError("sample_weight must be finite and strictly positive")
+        return values
 
     def _get_safe_values(self, dtype: pl.DataType, values: List[Any]) -> List[Any]:
         """Filter values compatible with column dtype to avoid type errors."""
@@ -739,63 +791,72 @@ class WoeBinner(MarsTransformer):
         return pl.DataFrame(data).sort("total_iv", descending=True)
     
     @time_it
-    def compute_bin_stats(self, X: pl.DataFrame, y: pl.Series) -> pl.DataFrame:
-        """
-        Compute comprehensive binning statistics.
-        
-        Uses Polars matrix unpivot aggregation for efficient computation.
-        
-        Returns
-        -------
-        pl.DataFrame
-            Statistics including: feature, bin_idx, count, bad, good, 
-            bad_rate, woe, iv, ks
-        """
+    def compute_bin_stats(
+        self,
+        X: pl.DataFrame,
+        y: pl.Series,
+        sample_weight: Optional[Any] = None,
+    ) -> pl.DataFrame:
+        """Compute weighted bin-level diagnostics for fitted features."""
         X_binned = self.transform(X, return_type="index")
-        
+        y_np = np.asarray(y.to_numpy(), dtype=float)
+        weights = self._validate_sample_weight(sample_weight, len(y_np))
+        total_bad = float(np.sum(weights * y_np))
+        total_good = float(np.sum(weights * (1.0 - y_np)))
+        if total_bad <= 0 or total_good <= 0:
+            return pl.DataFrame()
+
         all_stats = []
-        y_np = y.to_numpy()
-        total_bad = y_np.sum()
-        total_good = len(y_np) - total_bad
-        
         for col in self.fitted_features_:
             bin_col = f"{col}_bin"
             if bin_col not in X_binned.columns:
                 continue
-            
             stats = (
                 pl.DataFrame({
                     "bin_idx": X_binned[bin_col],
-                    "target": y
+                    "target": y,
+                    "weight": weights,
                 })
+                .with_columns([
+                    (pl.col("target") * pl.col("weight")).alias("bad_weight"),
+                    ((1.0 - pl.col("target")) * pl.col("weight")).alias(
+                        "good_weight"
+                    ),
+                ])
                 .group_by("bin_idx")
                 .agg([
-                    pl.len().alias("count"),
-                    pl.col("target").sum().alias("bad"),
+                    pl.col("weight").sum().alias("count"),
+                    pl.col("bad_weight").sum().alias("bad"),
+                    pl.col("good_weight").sum().alias("good"),
                 ])
                 .with_columns([
                     pl.lit(col).alias("feature"),
-                    (pl.col("count") - pl.col("bad")).alias("good"),
                     (pl.col("bad") / pl.col("count")).alias("bad_rate"),
-                ])
-                .with_columns([
                     (pl.col("bad") / total_bad).alias("dist_bad"),
                     (pl.col("good") / total_good).alias("dist_good"),
                 ])
                 .with_columns([
                     (
-                        ((pl.col("bad") + 0.5) / (total_bad + 1)) /
-                        ((pl.col("good") + 0.5) / (total_good + 1))
+                        (
+                            (pl.col("bad") + self.smoothing)
+                            / (total_bad + self.smoothing * 2)
+                        )
+                        / (
+                            (pl.col("good") + self.smoothing)
+                            / (total_good + self.smoothing * 2)
+                        )
                     ).log().alias("woe")
                 ])
                 .with_columns([
-                    ((pl.col("dist_bad") - pl.col("dist_good")) * pl.col("woe")).alias("iv")
+                    (
+                        (pl.col("dist_bad") - pl.col("dist_good"))
+                        * pl.col("woe")
+                    ).alias("iv")
                 ])
                 .sort("bin_idx")
             )
-            
             all_stats.append(stats)
-        
+
         if all_stats:
             return pl.concat(all_stats)
         return pl.DataFrame()
