@@ -108,6 +108,39 @@ def load_csv(
 
 
 @time_it
+def load_pickle(
+    file_path: Union[str, Path],
+) -> pl.DataFrame:
+    """Load a pickled Polars/Pandas/DataFrame-like object."""
+    import pickle
+
+    file_path = Path(file_path)
+    logger.info(f"📂 Loading Pickle: {file_path.name}")
+    with file_path.open("rb") as handle:
+        try:
+            value = pickle.load(handle)
+        except Exception:
+            handle.seek(0)
+            import joblib
+            value = joblib.load(handle)
+
+    if isinstance(value, pl.DataFrame):
+        df = value
+    elif isinstance(value, pl.LazyFrame):
+        df = value.collect()
+    elif isinstance(value, dict):
+        df = pl.DataFrame(value)
+    elif hasattr(value, "columns") and hasattr(value, "to_dict"):
+        df = pl.from_pandas(value)
+    else:
+        raise TypeError(
+            "Pickle must contain a Polars/Pandas DataFrame or a column mapping"
+        )
+    logger.info(f"✅ Loaded {len(df)} rows × {len(df.columns)} columns")
+    return df
+
+
+@time_it
 def load_excel(
     file_path: Union[str, Path],
     *,
@@ -322,6 +355,8 @@ def load_data(
             return load_excel(file_path, **kwargs)
         elif suffix == '.parquet':
             return load_parquet(file_path, **kwargs)
+        elif suffix in ('.pkl', '.pickle'):
+            return load_pickle(file_path)
         else:
             raise ValueError(f"Unsupported file type: {suffix}")
     
@@ -335,6 +370,8 @@ def load_data(
             return load_excel(source['path'], **kwargs)
         elif source_type == 'parquet':
             return load_parquet(source['path'], **kwargs)
+        elif source_type in ('pkl', 'pickle'):
+            return load_pickle(source['path'])
         elif source_type == 'sql':
             return load_sql(source['query'], kwargs['connection'], **kwargs)
         else:
