@@ -23,8 +23,10 @@ jobs:
           cache: pip
       - name: Install package and test dependencies
         run: python -m pip install --upgrade pip && python -m pip install ".[dev]"
+      - name: Lint
+        run: python -m ruff check auto_modeling_tool scripts tests
       - name: Compile source and tests
-        run: python -m compileall -q src scripts tests
+        run: python -m compileall -q **auto_modeling_tool** scripts tests
       - name: Run test suite
         run: python -m pytest tests -q
 
