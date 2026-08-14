@@ -103,11 +103,18 @@ def calculate_auc_roc(
     *,
     sample_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> float:
-    """Calculate weighted ROC AUC."""
+    """Calculate weighted ROC AUC.
+
+    A one-class evaluation slice has no defined ROC curve; return the
+    neutral value 0.5 so Dev/OOT and segment reports remain exportable.
+    """
     from sklearn.metrics import roc_auc_score
+    target = _to_numpy(y_true)
+    if len(np.unique(target)) < 2:
+        return 0.5
     return float(
         roc_auc_score(
-            _to_numpy(y_true),
+            target,
             _to_numpy(y_score),
             sample_weight=None if sample_weight is None else _to_numpy(sample_weight),
         )
