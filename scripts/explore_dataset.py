@@ -33,6 +33,23 @@ def _missing_rate(series: pl.Series) -> float:
     return float(missing.sum() / max(len(series), 1))
 
 
+def _weighted_mean(
+    series: pl.Series,
+    weight: Optional[pl.Series] = None,
+) -> float:
+    """Return an unweighted or sample-weighted mean for a numeric series."""
+    values = series.cast(pl.Float64).to_numpy()
+    if len(values) == 0:
+        return float("nan")
+    if weight is None:
+        return float(np.mean(values))
+    weights = weight.cast(pl.Float64).to_numpy()
+    total = float(weights.sum())
+    if total <= 0 or not np.isfinite(total):
+        return float("nan")
+    return float(np.average(values, weights=weights))
+
+
 def _weighted_distribution(
     series: pl.Series,
     weight: Optional[pl.Series] = None,
@@ -281,11 +298,21 @@ def main() -> int:
                 export_woe_detail=args.export_woe_detail,
             )
         )
+        dev_weight = (
+            dev[args.weight_column].cast(pl.Float64)
+            if args.use_sample_weight and args.weight_column
+            else None
+        )
+        oot_weight = (
+            oot[args.weight_column].cast(pl.Float64)
+            if args.use_sample_weight and args.weight_column
+            else None
+        )
         overview.update({
             "dev_rows": len(dev),
             "oot_rows": len(oot),
-            "dev_bad_rate": float(dev[args.target].mean()),
-            "oot_bad_rate": float(oot[args.target].mean()),
+            "dev_bad_rate": _weighted_mean(dev[args.target], dev_weight),
+            "oot_bad_rate": _weighted_mean(oot[args.target], oot_weight),
         })
 
     output = Path(args.output)
@@ -318,3 +345,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
