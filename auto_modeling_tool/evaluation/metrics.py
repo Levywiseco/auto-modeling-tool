@@ -132,7 +132,7 @@ def calculate_ks(
     target = _to_numpy(y_true).astype(float)
     score = _to_numpy(y_score).astype(float)
     weights = _validated_weights(sample_weight, len(target))
-    order = np.argsort(-score)
+    order = np.argsort(-score, kind="mergesort")
     target, score, weights = target[order], score[order], weights[order]
     pos_weight = float(np.sum(weights * target))
     neg_weight = float(np.sum(weights * (1.0 - target)))
@@ -141,8 +141,20 @@ def calculate_ks(
     tpr = np.cumsum(weights * target) / pos_weight
     fpr = np.cumsum(weights * (1.0 - target)) / neg_weight
     differences = np.abs(tpr - fpr)
+
+    # KS may only be read where a threshold could actually fall — at the end of
+    # each group of equal scores. Samples sharing a score cannot be separated,
+    # so measuring inside a tied group credits the model with discrimination it
+    # does not have: a constant score would otherwise report KS near 1.0
+    # whenever the input happens to arrive sorted by label.
+    group_end = np.empty(len(score), dtype=bool)
+    group_end[-1] = True
+    if len(score) > 1:
+        np.not_equal(score[:-1], score[1:], out=group_end[:-1])
+    differences = np.where(group_end, differences, -1.0)
+
     idx = int(np.argmax(differences))
-    return float(differences[idx]), float(score[idx])
+    return float(max(differences[idx], 0.0)), float(score[idx])
 
 
 

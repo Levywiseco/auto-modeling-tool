@@ -180,3 +180,57 @@ def test_calculate_lift_handles_duplicate_scores():
     )
     assert isinstance(table, pl.DataFrame)
     assert len(table) == 1
+
+
+class TestKSTieHandling:
+    """KS must be read only where a threshold could fall.
+
+    Measuring inside a group of equal scores credits the model with
+    discrimination it does not have: a constant score previously reported
+    KS 0.924 whenever the input arrived sorted by label.
+    """
+
+    @staticmethod
+    def _reference_ks(y, s, w=None):
+        from sklearn.metrics import roc_curve
+
+        fpr, tpr, _ = roc_curve(y, s, sample_weight=w)
+        return float(np.max(np.abs(tpr - fpr)))
+
+    def test_constant_score_has_no_discrimination(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_ks
+
+        y = np.array([0] * 200 + [1] * 200)
+        ks, _ = calculate_ks(y, np.full(400, 0.3))
+        assert ks == 0.0
+
+    def test_perfect_separation_is_one(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_ks
+
+        y = np.array([0] * 200 + [1] * 200)
+        score = np.concatenate([np.zeros(200), np.ones(200)])
+        assert calculate_ks(y, score)[0] == pytest.approx(1.0)
+
+    @pytest.mark.parametrize("n_levels", [2, 4, 20])
+    def test_matches_roc_definition_with_heavy_ties(self, n_levels):
+        """Scorecards emit few distinct values — the tie-heavy real case."""
+        from auto_modeling_tool.evaluation.metrics import calculate_ks
+
+        rng = np.random.default_rng(7)
+        y = rng.binomial(1, 0.35, 800)
+        levels = np.linspace(0.1, 0.9, n_levels)
+        score = rng.choice(levels, 800) + y * 0.05
+
+        ks, _ = calculate_ks(y, score)
+        assert ks == pytest.approx(self._reference_ks(y, score), abs=1e-9)
+
+    def test_matches_roc_definition_when_weighted(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_ks
+
+        rng = np.random.default_rng(11)
+        y = rng.binomial(1, 0.4, 600)
+        score = rng.choice([0.2, 0.4, 0.6, 0.8], 600)
+        weights = rng.choice([1.0, 3.0], 600)
+
+        ks, _ = calculate_ks(y, score, sample_weight=weights)
+        assert ks == pytest.approx(self._reference_ks(y, score, weights), abs=1e-9)

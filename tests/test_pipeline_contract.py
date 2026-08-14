@@ -218,3 +218,58 @@ def test_export_excel_can_be_disabled(tmp_path):
     assert (tmp_path / "scoring_artifact.pkl").exists()
     assert not list(tmp_path.glob("Model_Report_*.xlsx"))
 
+
+
+def test_evaluation_columns_are_not_trained_on(tmp_path):
+    """segment/temporal/benchmark columns describe the model, they are not inputs.
+
+    Training on a temporal column is time leakage — the model learns "March is
+    bad" and is meaningless on an unseen month. Training on a benchmark column
+    destroys the comparison and makes the external score a hard dependency of
+    scoring. Both previously happened silently whenever those columns carried
+    signal, inflating OOT AUC.
+    """
+    from auto_modeling_tool.main import run_modeling_pipeline
+
+    rng = np.random.default_rng(5)
+    n = 900
+    x1 = rng.normal(size=n)
+    month_idx = rng.integers(0, 3, n)
+    # Both auxiliary columns are deliberately strong predictors.
+    target = (x1 * 0.5 + month_idx * 1.5 + rng.normal(size=n) * 0.4 > 1.5).astype(int)
+    csv = tmp_path / "d.csv"
+    pl.DataFrame({
+        "x1": x1,
+        "apply_month": [f"2026-0{i + 1}" for i in month_idx],
+        "bureau_score": target * 80 + rng.normal(600, 20, n),
+        "channel": rng.choice(["app", "h5"], n),
+        "target": target,
+        "sample": ["dev"] * 700 + ["oot"] * 200,
+    }).write_csv(csv)
+
+    result = run_modeling_pipeline(
+        str(csv), "target",
+        output_dir=str(tmp_path / "out"),
+        sample_col="sample", n_bins=5, min_samples_bin=20,
+        temporal_col="apply_month",
+        benchmark_cols=["bureau_score"],
+        segment_cols=["channel"],
+        archive_run=False,
+    )
+
+    aux = {"apply_month", "bureau_score", "channel"}
+    assert not aux & set(result["selected_features"])
+    assert not any(
+        any(a in feature for a in aux) for feature in result["selected_features"]
+    )
+
+    # The scoring contract must not demand columns the model never uses.
+    artifact = joblib.load(tmp_path / "out" / "scoring_artifact.pkl")
+    assert not aux & set(artifact["feature_columns"])
+
+    # Excluding them from training must not remove them from the report.
+    from openpyxl import load_workbook
+
+    report = next((tmp_path / "out").glob("Model_Report_*.xlsx"))
+    sheets = set(load_workbook(report, read_only=True).sheetnames)
+    assert {"Temporal_Stability", "Benchmark_Performance", "Segment_Summary"} <= sheets
