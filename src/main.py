@@ -15,6 +15,9 @@ def run_modeling_pipeline(
     target_col: str,
     output_dir: str = "output",
     *,
+    target_mode: str = "classification",
+    model_type: str = "logistic",
+    target_transform: Optional[str] = None,
     test_size: float = 0.2,
     n_bins: int = 10,
     binning_method: str = "quantile",
@@ -31,37 +34,72 @@ def run_modeling_pipeline(
     min_samples_bin: int = 50,
     monotonic: bool = False,
     exclude_columns: Optional[list[str]] = None,
+    weight_col: Optional[str] = None,
     data_encoding: str = "utf-8",
 ) -> Dict[str, Any]:
-    """Run the shared AutoPipeline implementation."""
+    """Run the classification or regression pipeline selected by config."""
+    common = {
+        "target_col": target_col,
+        "test_size": test_size,
+        "random_state": random_state,
+        "sample_col": sample_col,
+        "date_column": date_column,
+        "oot_start": oot_start,
+        "dev_label": dev_label,
+        "oot_label": oot_label,
+        "clean_strategy": clean_strategy,
+        "normalize_method": normalize_method,
+    }
+    fit_kwargs = {
+        "sample_col": sample_col,
+        "date_column": date_column,
+        "oot_start": oot_start,
+        "dev_label": dev_label,
+        "oot_label": oot_label,
+        "clean_strategy": clean_strategy,
+        "normalize_method": normalize_method,
+        "min_samples_bin": min_samples_bin,
+        "monotonic": monotonic,
+        "exclude_columns": exclude_columns or [],
+        "weight_col": weight_col,
+        "encoding": data_encoding,
+    }
+
+    if target_mode == "regression":
+        from .pipelines.regression_pipeline import RegressionPipeline
+
+        pipeline = RegressionPipeline(
+            model_type=model_type,
+            target_transform=target_transform,
+            **common,
+        )
+        pipeline.fit(data_path, **fit_kwargs)
+        metrics = pipeline.evaluate()
+        pipeline.save(output_dir)
+        return {
+            "model": pipeline.model_,
+            "metrics": metrics,
+            "feature_importance": None,
+            "selected_features": pipeline.feature_columns_,
+            "output_path": Path(output_dir),
+            "pipeline": pipeline,
+        }
+
+    if target_mode != "classification":
+        raise ValueError("target_mode must be classification or regression")
+    if model_type != "logistic":
+        raise ValueError(
+            "The current AutoPipeline classification entry point supports logistic only"
+        )
+
     pipeline = AutoPipeline(
-        target_col=target_col,
-        test_size=test_size,
         n_bins=n_bins,
         binning_method=binning_method,
         selection_method=selection_method,
         n_features=n_features,
-        random_state=random_state,
-        sample_col=sample_col,
-        date_column=date_column,
-        oot_start=oot_start,
-        dev_label=dev_label,
-        oot_label=oot_label,
+        **common,
     )
-    pipeline.fit(
-        data_path,
-        sample_col=sample_col,
-        date_column=date_column,
-        oot_start=oot_start,
-        dev_label=dev_label,
-        oot_label=oot_label,
-        clean_strategy=clean_strategy,
-        normalize_method=normalize_method,
-        min_samples_bin=min_samples_bin,
-        monotonic=monotonic,
-        exclude_columns=exclude_columns or [],
-        encoding=data_encoding,
-    )
+    pipeline.fit(data_path, **fit_kwargs)
     metrics = pipeline.evaluate()
     pipeline.save(output_dir)
     return {
@@ -90,6 +128,9 @@ def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
         "data_path": args.input,
         "target_col": args.target,
         "output_dir": args.output,
+        "target_mode": args.target_mode,
+        "model_type": args.model,
+        "target_transform": args.target_transform,
         "test_size": args.test_size,
         "n_bins": args.n_bins,
         "binning_method": args.method,
@@ -106,9 +147,10 @@ def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
         "min_samples_bin": args.min_samples_bin,
         "monotonic": args.monotonic,
         "exclude_columns": args.exclude_column,
+        "weight_col": args.weight_column,
+        "data_encoding": args.encoding,
     }
     return {key: value for key, value in values.items() if value is not None}
-
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -118,6 +160,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", "-i", help="Input data file path")
     parser.add_argument("--target", "-t", help="Target column name")
     parser.add_argument("--output", "-o", help="Output directory")
+    parser.add_argument("--target-mode", choices=["classification", "regression"])
+    parser.add_argument("--model", choices=[
+        "logistic", "linear", "linear_regression", "tree",
+        "random_forest", "xgboost", "lightgbm", "catboost",
+    ])
+    parser.add_argument("--target-transform", choices=["log1p"])
     parser.add_argument("--test-size", type=float, help="Random fallback OOT proportion")
     parser.add_argument("--n-bins", type=int)
     parser.add_argument("--method", choices=["quantile", "uniform", "cart"])
@@ -136,13 +184,14 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--normalize-method", choices=["minmax", "zscore", "robust"])
     parser.add_argument("--min-samples-bin", type=int)
     parser.add_argument("--monotonic", action="store_true", default=None)
+    parser.add_argument("--weight-column")
+    parser.add_argument("--encoding")
     parser.add_argument(
         "--exclude-column",
         action="append",
         help="Column excluded from modeling; repeat for multiple columns",
     )
     return parser
-
 
 def main() -> int:
     args = _parser().parse_args()
@@ -158,6 +207,9 @@ def main() -> int:
                 "data_path": args.input,
                 "target_col": args.target,
                 "output_dir": args.output or "output",
+                "target_mode": args.target_mode or "classification",
+                "model_type": args.model or "logistic",
+                "target_transform": args.target_transform,
                 "test_size": args.test_size if args.test_size is not None else 0.2,
                 "n_bins": args.n_bins if args.n_bins is not None else 10,
                 "binning_method": args.method or "quantile",
