@@ -155,3 +155,33 @@ class TestRemoveMulticollinearity:
 
         assert len(dropped) > 0
         assert len(result.columns) < len(X.columns)
+
+
+def test_iv_selection_respects_n_features():
+    """`n_features` was ignored by the IV path — the default selection method.
+
+    Configuring n_features had no effect at all unless you also switched the
+    selection method away from its default.
+    """
+    import numpy as np
+    import polars as pl
+
+    from auto_modeling_tool.features.selection import select_features
+
+    rng = np.random.default_rng(5)
+    n = 400
+    target = rng.binomial(1, 0.4, n)
+    # Six informative features, decreasing in signal strength.
+    frame = pl.DataFrame({
+        f"f{i}": target * (1.6 - 0.2 * i) + rng.normal(size=n)
+        for i in range(6)
+    })
+    y = pl.Series("target", target)
+
+    uncapped = select_features(frame, y, method="iv")
+    assert len(uncapped) > 3, "fixture must clear the IV threshold on >3 features"
+
+    capped = select_features(frame, y, method="iv", n_features=3)
+    assert len(capped) == 3
+    # The survivors are the strongest ones, in IV order.
+    assert capped == uncapped[:3]

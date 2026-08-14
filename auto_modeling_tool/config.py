@@ -100,6 +100,7 @@ def config_to_pipeline_kwargs(config: dict[str, Any]) -> dict[str, Any]:
     )
     oot_start = _first(split, ["oot_start", "oot_begin"])
     output_dir = _first(output, ["dir", "path"], data.get("output_path", "output"))
+    runs_dir = _first(output, ["runs_dir", "runs"], "runs")
 
     kwargs = {
         "data_path": _resolve_path(data_path, config_path),
@@ -131,6 +132,8 @@ def config_to_pipeline_kwargs(config: dict[str, Any]) -> dict[str, Any]:
             None,
         ),
         "output_dir": _resolve_path(output_dir, config_path),
+        "runs_dir": _resolve_path(runs_dir, config_path),
+        "archive_run": bool(_first(output, ["archive_run", "archive_runs"], True)),
         "test_size": float(test_size if test_size is not None else 0.2),
         "n_bins": int(_first(binning, ["n_bins"], 10)),
         "binning_method": _first(binning, ["method", "binning_method"], "quantile"),

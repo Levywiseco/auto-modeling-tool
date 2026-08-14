@@ -88,7 +88,7 @@ def select_features(
         selected = _select_by_variance(X, threshold)
     elif method == "iv":
         selected = _select_by_iv(
-            X, y, iv_threshold, sample_weight=sample_weight
+            X, y, iv_threshold, n_features=n_features, sample_weight=sample_weight
         )
     elif method == "mutual_info":
         selected = _select_mutual_info(X, y, n_features or 10)
@@ -212,9 +212,10 @@ def _select_by_iv(
     y: np.ndarray,
     threshold: float,
     *,
+    n_features: Optional[int] = None,
     sample_weight: Optional[Union[pl.Series, np.ndarray]] = None,
 ) -> list[str]:
-    """Select features by Information Value."""
+    """Select features by Information Value, keeping at most ``n_features``."""
     from ..binning.woe_binning import WoeBinner
 
     numeric_cols = _get_numeric_columns(X)
@@ -237,6 +238,10 @@ def _select_by_iv(
     selected.sort(key=lambda x: iv_results.get(x, 0), reverse=True)
 
     logger.info(f"   Selected {len(selected)} features with IV >= {threshold}")
+
+    if n_features is not None and n_features > 0 and len(selected) > n_features:
+        selected = selected[:n_features]
+        logger.info(f"   Capped to the top {n_features} by IV")
 
     return selected
 

@@ -1,5 +1,34 @@
 # Release Notes
 
+## 3.1.0（2026-08-15）
+
+### 新增
+
+- **运行历史。** 每次运行自动归档到 `runs/<run_id>/`，含最终生效配置、
+  达成的指标与可部署 artifact，模型在很久之后仍可追溯。`output/` 行为不变，
+  仍是最新一次产物，既有路径全部照常工作。
+  - `python -m auto_modeling_tool.runs list` —— 历史列表，最新在前
+  - `python -m auto_modeling_tool.runs compare <a> <b>` —— 指标增减、配置差异、
+    入模特征进出，三个维度并排看
+  - `python -m auto_modeling_tool.runs show <id>` —— 单次运行全部细节
+  - run id 形如 `<时间戳>-<算法>-<哈希>`：可排序、可读、同秒不冲突，
+    支持唯一前缀检索
+  - 配置项 `output.runs_dir` / `output.archive_run`；命令行 `--runs-dir` /
+    `--no-archive-run`
+  - 归档失败只记 warning 不中断——跑了二十分钟的模型不会因为磁盘满而白跑
+  - 详见[运行历史](../guide/run-history.md)
+
+### 修复
+
+- **`n_features` 在默认筛选方法下完全无效。** `_select_by_iv` 从未收到这个
+  参数，IV 筛选只受 `iv_threshold` 支配，配 `n_features: 8` 和 `n_features: 3`
+  得到的入模变量一模一样。现在它会对 IV 排序后的列表做截断，与其他筛选方法
+  行为一致。**这是对比两次归档运行时发现的——运行历史交付的第一个战果。**
+
+    !!! warning "IV 路径的结果会变"
+        此前"凡是 IV 超过阈值就全留"的运行，现在最多保留 `n_features` 个
+        （默认 20），按 IV 从高到低取。
+
 ## 3.0.1（2026-08-14）
 
 ### 修复
