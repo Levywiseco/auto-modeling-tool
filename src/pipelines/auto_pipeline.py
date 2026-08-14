@@ -209,6 +209,8 @@ class AutoPipeline:
         self._y_oot = y_oot
         self._X_test = X_oot_raw
         self._y_test = y_oot
+        y_train = y_dev
+        y_test = y_oot
 
         # Critical invariant: preprocessing statistics are learned on Dev only.
         self.preprocessor_ = DataPreprocessor(
