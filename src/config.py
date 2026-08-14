@@ -176,6 +176,11 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
         "convert_to_credit_score": bool(
             _first(scoring, ["convert_to_credit_score"], False)
         ),
+        "credit_score_col": _first(scoring, ["credit_score_col"], "pred_score"),
+        "base_score": float(_first(scoring, ["base_score"], 500.0)),
+        "pdo": float(_first(scoring, ["pdo"], 50.0)),
+        "min_score": float(_first(scoring, ["min_score"], 300.0)),
+        "max_score": float(_first(scoring, ["max_score"], 900.0)),
     }
     allowed = (
         {
