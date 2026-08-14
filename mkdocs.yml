@@ -49,12 +49,17 @@ nav:
       - 10 分钟 Quickstart: getting-started/quickstart.md
       - 核心 API 约定: getting-started/api-conventions.md
   - 使用指南:
+      - 配置驱动主流程: guide/config-pipeline.md
       - 数据画像: guide/data-profiling.md
       - 分箱与风险评估: guide/binning-risk-evaluation.md
       - 特征筛选: guide/feature-selection.md
+      - 回归任务: guide/regression.md
+      - 独立打分与 Artifact: guide/scoring-artifact.md
+      - 发布门禁: guide/release-gate.md
       - 特征与模型监控: guide/monitoring.md
       - 报告与导出: guide/reports.md
   - API Reference:
+      - CLI 与脚本: reference/cli.md
       - Analysis: reference/analysis.md
       - Monitoring: reference/monitoring.md
       - Report 对象: reference/report-objects.md

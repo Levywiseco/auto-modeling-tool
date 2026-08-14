@@ -32,7 +32,7 @@ Low-level tools (sklearn-style)
 >>> from src.evaluation import calculate_all_metrics
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "AutoModelTool Team"
 
 # Task-oriented workflow entry points

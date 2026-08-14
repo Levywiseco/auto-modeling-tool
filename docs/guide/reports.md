@@ -30,6 +30,34 @@ report.summary_table.write_parquet("x.pq")   # Parquet
 report.summary_table.to_dicts()              # list[dict]，直接进 JSON
 ```
 
+## 流水线的 Excel 审计报告
+
+走[配置驱动主流程](config-pipeline.md)时，除了 Report 对象，还会在输出目录
+落一份多页的 `Model_Report_N.xlsx`。固定包含三页：
+
+| Sheet | 内容 |
+|-------|------|
+| `Overview_Performance` | 主指标（Dev / OOT） |
+| `Report_Index` | 本册所有 sheet 的用途索引 |
+| `Artifact_Metadata` | 复现与部署元信息 |
+
+按配置追加的页：
+
+| Sheet | 触发条件 |
+|-------|---------|
+| `Dev_Score_Bins` / `OOT_Score_Bins` | 分类任务默认 |
+| `Score_PSI` | 有 OOT 时的分数 PSI |
+| `Stability_Summary` | 特征稳定性汇总 |
+| `Segment_Summary` | 配了 `evaluation.segment_cols` |
+| `Temporal_Stability` | 配了 `evaluation.temporal_col` |
+| `Benchmark_Performance` | 配了 `evaluation.benchmark_cols` |
+
+外加分箱、WOE、IV、变量审计和筛选过程页。
+
+`export_excel: false` 可以关掉整份 Excel（分类和回归都生效）。
+`Overview_Performance` 和 `Artifact_Metadata` 两页是[发布门禁](release-gate.md)
+的检查项，关掉 Excel 后门禁的 `report_contract` 会失败。
+
 ## metadata 是审计线索
 
 每个 report 的 `metadata` 记录了本次运行的完整口径：
