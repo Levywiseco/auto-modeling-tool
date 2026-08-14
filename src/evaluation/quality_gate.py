@@ -82,11 +82,11 @@ def validate_release(
 
     if report_path is None and not isinstance(source, dict):
         candidate = Path(source)
-        report_path = (
-            candidate / "Model_Report_1.xlsx"
-            if candidate.is_dir()
-            else candidate.parent / "Model_Report_1.xlsx"
-        )
+        if candidate.is_dir():
+            reports = sorted(candidate.glob("Model_Report_*.xlsx"))
+            report_path = reports[-1] if reports else candidate / "Model_Report_1.xlsx"
+        else:
+            report_path = candidate.parent / "Model_Report_1.xlsx"
     if report_path is not None:
         report = Path(report_path)
         try:
