@@ -211,97 +211,60 @@ def calculate_psi(
     n_bins: int = 10,
     bin_type: str = "quantile",
     epsilon: float = 1e-10,
+    expected_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
+    actual_weight: Optional[Union[pl.Series, np.ndarray, List]] = None,
 ) -> Tuple[float, pl.DataFrame]:
-    """
-    Calculate Population Stability Index (PSI).
-    
-    PSI measures the shift in distribution between two populations
-    (e.g., training vs. validation data).
-    
-    PSI Interpretation:
-    - PSI < 0.1: No significant change
-    - 0.1 <= PSI < 0.25: Moderate change, investigation needed
-    - PSI >= 0.25: Significant change, action required
-    
-    Parameters
-    ----------
-    expected : array-like
-        Expected (baseline) distribution (e.g., training data).
-    actual : array-like
-        Actual distribution to compare (e.g., validation data).
-    n_bins : int, default 10
-        Number of bins for distribution comparison.
-    bin_type : str, default "quantile"
-        Binning strategy: "quantile" or "uniform".
-    epsilon : float, default 1e-10
-        Small value to prevent division by zero.
-        
-    Returns
-    -------
-    tuple of (psi_value, psi_table)
-        PSI value and detailed PSI table by bin.
-        
-    Example
-    -------
-    >>> psi, table = calculate_psi(train_scores, test_scores)
-    >>> print(f"PSI: {psi:.4f}")
-    >>> if psi < 0.1:
-    ...     print("No significant population shift")
-    """
-    expected = _to_series(expected, "expected")
-    actual = _to_series(actual, "actual")
-    
-    n_expected = len(expected)
-    n_actual = len(actual)
-    
+    """Calculate PSI with optional weighted population shares."""
+    expected_values = _to_numpy(expected).astype(float)
+    actual_values = _to_numpy(actual).astype(float)
+    expected_weights = _validated_weights(expected_weight, len(expected_values))
+    actual_weights = _validated_weights(actual_weight, len(actual_values))
+    expected_total = float(expected_weights.sum())
+    actual_total = float(actual_weights.sum())
+    if expected_total <= 0 or actual_total <= 0:
+        raise ValueError("PSI populations must contain positive total weight")
+
     if bin_type == "quantile":
         quantiles = np.linspace(0, 1, n_bins + 1)
-        bin_edges = [expected.quantile(q) for q in quantiles]
-        bin_edges[0] = float('-inf')
-        bin_edges[-1] = float('inf')
+        bin_edges = [float(np.quantile(expected_values, q)) for q in quantiles]
+        bin_edges[0] = float("-inf")
+        bin_edges[-1] = float("inf")
     else:
-        min_val = min(expected.min(), actual.min())
-        max_val = max(expected.max(), actual.max())
-        bin_edges = np.linspace(min_val, max_val, n_bins + 1)
-        bin_edges[0] = float('-inf')
-        bin_edges[-1] = float('inf')
-    
+        min_val = min(expected_values.min(), actual_values.min())
+        max_val = max(expected_values.max(), actual_values.max())
+        bin_edges = np.linspace(min_val, max_val, n_bins + 1).tolist()
+        bin_edges[0] = float("-inf")
+        bin_edges[-1] = float("inf")
+
     psi_total = 0.0
     psi_data = []
-    
     for i in range(n_bins):
-        lower = bin_edges[i]
-        upper = bin_edges[i + 1]
-        
+        lower, upper = bin_edges[i], bin_edges[i + 1]
         if i == n_bins - 1:
-            exp_count = ((expected >= lower) & (expected <= upper)).sum()
-            act_count = ((actual >= lower) & (actual <= upper)).sum()
+            expected_mask = (expected_values >= lower) & (expected_values <= upper)
+            actual_mask = (actual_values >= lower) & (actual_values <= upper)
         else:
-            exp_count = ((expected >= lower) & (expected < upper)).sum()
-            act_count = ((actual >= lower) & (actual < upper)).sum()
-        
-        exp_pct = (exp_count + epsilon) / n_expected
-        act_pct = (act_count + epsilon) / n_actual
-        
-        psi_bin = (act_pct - exp_pct) * np.log(act_pct / exp_pct)
+            expected_mask = (expected_values >= lower) & (expected_values < upper)
+            actual_mask = (actual_values >= lower) & (actual_values < upper)
+        expected_count = float(expected_weights[expected_mask].sum())
+        actual_count = float(actual_weights[actual_mask].sum())
+        expected_pct = (expected_count + epsilon) / expected_total
+        actual_pct = (actual_count + epsilon) / actual_total
+        psi_bin = float((actual_pct - expected_pct) * np.log(actual_pct / expected_pct))
         psi_total += psi_bin
-        
         psi_data.append({
             "bin": i + 1,
-            "lower": lower if lower != float('-inf') else None,
-            "upper": upper if upper != float('inf') else None,
-            "expected_count": int(exp_count),
-            "actual_count": int(act_count),
-            "expected_pct": exp_pct,
-            "actual_pct": act_pct,
+            "lower": lower if lower != float("-inf") else None,
+            "upper": upper if upper != float("inf") else None,
+            "expected_count": expected_count,
+            "actual_count": actual_count,
+            "expected_pct": expected_pct,
+            "actual_pct": actual_pct,
             "psi": psi_bin,
         })
-    
-    psi_table = pl.DataFrame(psi_data)
-    
+
     logger.info(f"📊 PSI: {psi_total:.4f}")
-    
-    return psi_total, psi_table
+    return float(psi_total), pl.DataFrame(psi_data)
 
 
 @time_it
