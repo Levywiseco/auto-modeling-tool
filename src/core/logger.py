@@ -22,11 +22,14 @@ class EncodingSafeStreamHandler(logging.StreamHandler):
     """Keep logs usable on terminals whose encoding cannot represent emoji."""
 
     def emit(self, record: logging.LogRecord) -> None:
+        # StreamHandler.emit handles UnicodeEncodeError internally via
+        # handleError(), so format/write explicitly to make replacement work.
         try:
-            super().emit(record)
+            message = self.format(record)
+            self.stream.write(message + self.terminator)
+            self.flush()
         except UnicodeEncodeError:
             try:
-                message = self.format(record)
                 encoding = getattr(self.stream, "encoding", None) or "utf-8"
                 safe_message = message.encode(encoding, errors="replace").decode(
                     encoding, errors="replace"
@@ -35,6 +38,8 @@ class EncodingSafeStreamHandler(logging.StreamHandler):
                 self.flush()
             except Exception:
                 self.handleError(record)
+        except Exception:
+            self.handleError(record)
 
 
 logger = logging.getLogger("AutoModel")
