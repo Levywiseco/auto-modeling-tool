@@ -99,3 +99,54 @@ def test_encoding_safe_stream_handler_replaces_unrepresentable_text():
     handler.emit(logging.LogRecord("test", logging.INFO, "<test>", 1, "✅ safe", (), None))
 
     assert "".join(stream.values) == "? safe\n"
+
+
+def test_weighted_xgboost_pipeline_and_release_gate(tmp_path):
+    from src.evaluation.quality_gate import validate_release
+    from src.pipelines.auto_pipeline import AutoPipeline
+
+    rng = np.random.default_rng(7)
+    n_rows = 120
+    x1 = rng.normal(size=n_rows)
+    x2 = rng.normal(size=n_rows)
+    target = ((x1 + 0.35 * x2) > 0).cast if False else (x1 + 0.35 * x2 > 0).astype(int)
+    frame = pl.DataFrame({
+        "x1": x1,
+        "x2": x2,
+        "target": target,
+        "weight": np.where(target == 1, 2.0, 1.0),
+        "sample": ["dev"] * 90 + ["oot"] * 30,
+    })
+
+    pipeline = AutoPipeline(
+        target_col="target",
+        model_type="xgboost",
+        model_params={
+            "n_estimators": 20,
+            "max_depth": 2,
+            "learning_rate": 0.1,
+        },
+        n_bins=4,
+        n_features=2,
+        early_stopping_eval="dev_holdout",
+        early_stopping_rounds=3,
+    )
+    pipeline.fit(
+        frame,
+        sample_col="sample",
+        weight_col="weight",
+        use_sample_weight=True,
+        min_samples_bin=5,
+    )
+    metrics = pipeline.evaluate()
+    assert "auc_roc" in metrics
+
+    output_dir = pipeline.save(tmp_path)
+    report_path = next(tmp_path.glob("Model_Report_*.xlsx"))
+    assert (output_dir / "scoring_artifact.pkl").exists()
+    result = validate_release(
+        output_dir,
+        report_path=report_path,
+        min_auc=0.5,
+    )
+    assert result.passed
