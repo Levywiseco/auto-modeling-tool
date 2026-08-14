@@ -20,7 +20,10 @@ def main() -> int:
     parser.add_argument("--output", required=True, help="CSV or Parquet output path")
     args = parser.parse_args()
 
-    artifact = load_scoring_artifact(args.model)
+    model_path = Path(args.model)
+    if model_path.is_dir():
+        model_path = model_path / "scoring_artifact.pkl"
+    artifact = load_scoring_artifact(model_path)
     raw = load_data(args.input)
     is_regression = artifact.get("task") == "regression"
     predictions = score_with_artifact(artifact, raw, return_proba=not is_regression)
