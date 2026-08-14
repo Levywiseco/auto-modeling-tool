@@ -207,3 +207,17 @@ class TestWoeBinner:
             for index in sorted(index for index in numeric_woes if index >= 0)
         ]
         assert ordered == sorted(ordered)
+
+
+    def test_weighted_woe_and_bin_stats(self):
+        """Weights affect WOE/IV and are preserved in bin diagnostics."""
+        X = pl.DataFrame({"feature": [0.0, 0.1, 0.9, 1.0]})
+        y = pl.Series("target", [0, 1, 0, 1])
+        weights = pl.Series("weight", [1.0, 1.0, 5.0, 5.0])
+
+        weighted = WoeBinner(n_bins=2, min_samples_bin=1)
+        weighted.fit(X, y, sample_weight=weights)
+        stats = weighted.compute_bin_stats(X, y, sample_weight=weights)
+
+        assert weighted.total_iv_["feature"] >= 0
+        assert stats["count"].sum() == pytest.approx(weights.sum())
