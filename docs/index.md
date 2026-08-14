@@ -37,11 +37,25 @@ profile.binner                 # 可复用的分箱规则
 
 | 任务 | 入口 | 文档 |
 |------|------|------|
+| 🚀 跑一个完整模型 | `python -m src.main --config ...` | [配置驱动主流程](guide/config-pipeline.md) |
 | 🔍 数据质量检查 | `profile_data(df, ...)` | [数据画像](guide/data-profiling.md) |
 | 🎯 特征风险评估 | `profile_risk(df, target=...)` | [分箱与风险评估](guide/binning-risk-evaluation.md) |
 | 🧪 候选特征筛选 | `FeatureSelector` | [特征筛选](guide/feature-selection.md) |
+| 📈 预测连续目标 | `--target-mode regression` | [回归任务](guide/regression.md) |
+| 💯 给新样本打分 | `score_with_artifact(...)` | [独立打分与 Artifact](guide/scoring-artifact.md) |
+| 🚦 上线前检查 | `validate_release(...)` | [发布门禁](guide/release-gate.md) |
 | 📡 特征 / 模型监控 | `Monitor().monitor(df, ...)` | [监控](guide/monitoring.md) |
 | 📋 报告交付 | `report.to_markdown()` | [报告与导出](guide/reports.md) |
+
+## 一条命令跑完整条链路
+
+```bash
+python -m src.main --config configs/pipeline_config.yaml
+```
+
+Dev/OOT 防泄漏切分 → 预处理 → WOE 分箱 → 特征筛选 → 建模 → 多页审计报告
+→ 可独立部署的 `scoring_artifact.pkl`。改 YAML 就能换任务类型、算法、
+权重和评估口径，不用写 Python。
 
 ## 入口怎么选
 
@@ -57,4 +71,5 @@ profile.binner                 # 可复用的分箱规则
 
 生产环境请固定版本号。各模块稳定等级见[稳定性与兼容性](project/stability.md)：
 `binning` / `features` / `evaluation` / `analysis` / `reports` 为 **Stable**，
-`monitoring` / `pipelines` 为 **Experimental**。
+`monitoring` / `pipelines` / `config` / `modeling.artifact` / `quality_gate`
+为 **Experimental**。

@@ -12,6 +12,9 @@
 | `src.monitoring` | **Experimental** | 告警阈值、文案、summary 列可能调整 |
 | `src.pipelines` | **Experimental** | 接口可能调整 |
 | `src.modeling.tuning` / `calibration` | **Experimental** | 接口可能调整 |
+| `src.config`（YAML schema） | **Experimental** | 2.2.0 起提供；字段名可能调整，旧键保留别名 |
+| `src.modeling.artifact` | **Experimental** | 2.2.0 起提供；artifact 格式带 `artifact_version` |
+| `src.evaluation.quality_gate` | **Experimental** | 2.2.0 起提供；检查项可能增加 |
 
 ## 兼容性约定
 
@@ -24,3 +27,13 @@
 - PSI 默认不含缺失箱与特殊值箱
 - `group_col` 的第一组（升序）自动作为 PSI 基准
 - 分箱索引协议：正常箱 ≥ 0，缺失 -1，其他 -2，特殊值 ≤ -3
+- 预处理 / WOE / 特征筛选**只在 Dev 上 fit**（2.2.0 起），OOT 只做 transform
+- Artifact 格式版本独立于包版本，见 `artifact["artifact_version"]`
+- 打分输出列：分类 `pred_proba`（`prediction` 为兼容别名），回归 `pred_value`
+
+## Python 版本支持
+
+| Python | 状态 |
+|--------|------|
+| 3.10 / 3.11 / 3.12 | CI 每次提交自动验证 |
+| 3.9 | 支持（`requires-python = ">=3.9"`），2.2.0 人工验证通过，未进 CI 矩阵 |

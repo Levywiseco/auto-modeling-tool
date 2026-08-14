@@ -3,7 +3,19 @@
 ## 环境要求
 
 - Python 3.9+
-- 核心依赖：Polars ≥ 0.20、NumPy、scikit-learn
+- 核心依赖：Polars ≥ 0.20、NumPy、Pandas、scikit-learn
+
+| Python | 状态 |
+|--------|------|
+| 3.10 / 3.11 / 3.12 | CI 每次提交自动验证 |
+| 3.9 | 支持，但只做过人工验证，未进 CI 矩阵 |
+
+!!! tip "macOS 上 XGBoost / LightGBM 报错"
+    报 `Library not loaded: libomp.dylib` 是缺 OpenMP 运行时，与本项目无关：
+
+    ```bash
+    brew install libomp
+    ```
 
 ## 从源码安装
 
