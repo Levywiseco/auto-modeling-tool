@@ -38,6 +38,7 @@ profile.binner                 # 可复用的分箱规则
 | 任务 | 入口 | 文档 |
 |------|------|------|
 | 🚀 跑一个完整模型 | `python -m auto_modeling_tool.main --config ...` | [配置驱动主流程](guide/config-pipeline.md) |
+| 📚 回看/对比历史实验 | `runs list` / `runs compare` | [运行历史](guide/run-history.md) |
 | 🔍 数据质量检查 | `profile_data(df, ...)` | [数据画像](guide/data-profiling.md) |
 | 🎯 特征风险评估 | `profile_risk(df, target=...)` | [分箱与风险评估](guide/binning-risk-evaluation.md) |
 | 🧪 候选特征筛选 | `FeatureSelector` | [特征筛选](guide/feature-selection.md) |

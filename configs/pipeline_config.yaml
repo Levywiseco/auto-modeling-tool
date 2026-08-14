@@ -18,6 +18,8 @@ data:
 
 output:
   dir: output
+  runs_dir: runs        # 每次运行归档到这里
+  archive_run: true     # 设 false 可关闭归档
 
 preprocess:
   clean_strategy: median

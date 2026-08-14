@@ -6,7 +6,44 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .config import config_to_pipeline_kwargs, load_pipeline_config
+from .core.logger import logger
 from .pipelines.auto_pipeline import AutoPipeline
+from .runs import archive_run as _archive_run
+
+
+def _archive_if_enabled(
+    output_dir: str,
+    *,
+    runs_dir: Optional[str],
+    archive: bool,
+    config: dict[str, Any],
+    metrics: dict[str, Any],
+    selected_features: Optional[list[str]],
+    task: str,
+    model_type: str,
+) -> Optional[Path]:
+    """Archive the finished run, never failing the pipeline over it.
+
+    A run that took twenty minutes must not be lost to a full disk or a
+    read-only path, so archiving problems are reported and swallowed.
+    """
+    if not archive or not runs_dir:
+        return None
+    try:
+        run_path = _archive_run(
+            output_dir,
+            runs_dir=runs_dir,
+            config=config,
+            metrics=metrics,
+            selected_features=selected_features,
+            task=task,
+            model_type=model_type,
+        )
+        logger.info(f"📁 Run archived to {run_path}")
+        return run_path
+    except Exception as exc:
+        logger.warning(f"Could not archive run (outputs are intact): {exc}")
+        return None
 
 
 def run_modeling_pipeline(
@@ -51,8 +88,14 @@ def run_modeling_pipeline(
     min_score: float = 300.0,
     max_score: float = 900.0,
     data_encoding: str = "utf-8",
+    runs_dir: Optional[str] = "runs",
+    archive_run: bool = True,
 ) -> dict[str, Any]:
     """Run the classification or regression pipeline selected by config."""
+    # Captured before any local is introduced, so this is exactly the resolved
+    # configuration (YAML plus CLI overrides) that produced the run.
+    resolved_config = dict(locals())
+
     common = {
         "target_col": target_col,
         "test_size": test_size,
@@ -103,12 +146,23 @@ def run_modeling_pipeline(
         pipeline.fit(data_path, **fit_kwargs)
         metrics = pipeline.evaluate()
         pipeline.save(output_dir)
+        run_path = _archive_if_enabled(
+            output_dir,
+            runs_dir=runs_dir,
+            archive=archive_run,
+            config=resolved_config,
+            metrics=metrics,
+            selected_features=pipeline.feature_columns_,
+            task="regression",
+            model_type=model_type,
+        )
         return {
             "model": pipeline.model_,
             "metrics": metrics,
             "feature_importance": None,
             "selected_features": pipeline.feature_columns_,
             "output_path": Path(output_dir),
+            "run_path": run_path,
             "pipeline": pipeline,
         }
 
@@ -135,12 +189,23 @@ def run_modeling_pipeline(
     pipeline.fit(data_path, **fit_kwargs)
     metrics = pipeline.evaluate()
     pipeline.save(output_dir)
+    run_path = _archive_if_enabled(
+        output_dir,
+        runs_dir=runs_dir,
+        archive=archive_run,
+        config=resolved_config,
+        metrics=metrics,
+        selected_features=pipeline.selected_features_,
+        task="classification",
+        model_type=model_type,
+    )
     return {
         "model": pipeline.model_,
         "metrics": metrics,
         "feature_importance": pipeline.feature_importance_,
         "selected_features": pipeline.selected_features_,
         "output_path": Path(output_dir),
+        "run_path": run_path,
         "pipeline": pipeline,
     }
 
@@ -196,6 +261,8 @@ def _cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         "pdo": args.pdo,
         "min_score": args.min_score,
         "max_score": args.max_score,
+        "runs_dir": args.runs_dir,
+        "archive_run": False if args.no_archive_run else None,
     }
     return {key: value for key, value in values.items() if value is not None}
 
@@ -250,6 +317,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--pdo", type=float)
     parser.add_argument("--min-score", type=float)
     parser.add_argument("--max-score", type=float)
+    parser.add_argument(
+        "--runs-dir",
+        help="Where to archive this run (default: runs)",
+    )
+    parser.add_argument(
+        "--no-archive-run",
+        action="store_true",
+        default=None,
+        help="Skip run archiving; only write the output directory",
+    )
     parser.add_argument(
         "--exclude-column",
         action="append",

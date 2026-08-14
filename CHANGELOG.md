@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.1.0] - 2026-08-15
+
+### Added
+
+- **Run history.** Every pipeline run is archived to `runs/<run_id>/` with the
+  resolved config, the metrics it reached, and the deployable artifact, so a
+  model can be traced back long after the fact. `output/` is untouched — it
+  still holds the latest run and every existing path keeps working.
+  - `python -m auto_modeling_tool.runs list` — history, newest first
+  - `python -m auto_modeling_tool.runs compare <a> <b>` — metric deltas, config
+    diff, and added/removed model features side by side
+  - `python -m auto_modeling_tool.runs show <id>` — one run in full
+  - Run ids are `<timestamp>-<algorithm>-<hash>`: sortable, readable, and safe
+    for two runs landing in the same second. Any unique prefix resolves.
+  - `output.runs_dir` / `output.archive_run` in config; `--runs-dir` /
+    `--no-archive-run` on the CLI
+  - Archiving failures are logged and swallowed — a twenty-minute run is never
+    lost to a full disk
+
+### Fixed
+
+- **`n_features` was ignored by the default selection method.** `_select_by_iv`
+  never received it, so IV selection was governed purely by `iv_threshold` and
+  configuring `n_features: 8` or `n_features: 3` produced identical feature
+  sets. It now caps the IV-ranked list, matching the behaviour every other
+  method already had. Found by comparing two archived runs — the first thing
+  run history paid for.
+
+  Note: on the IV path this changes results. Runs that previously kept every
+  feature above the IV threshold will now keep at most `n_features` of them
+  (default 20), strongest first.
+
 ## [3.0.1] - 2026-08-14
 
 ### Fixed
