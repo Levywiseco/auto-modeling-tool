@@ -189,7 +189,15 @@ class AutoPipeline:
         dev_weight = _validated_weight(dev, weight_col, use_sample_weight)
         oot_weight = _validated_weight(oot, weight_col, use_sample_weight)
 
+        # Evaluation columns describe the model, they are not inputs to it.
+        # A temporal column trained on is time leakage — the model learns "March
+        # is bad" and is meaningless on an unseen month. A benchmark column
+        # trained on stops being an independent comparison and makes the
+        # external score a hard dependency of scoring. Segment columns are
+        # excluded for the same reason: once the model has absorbed the segment,
+        # comparing performance across it no longer means anything.
         role_columns = {self.target_col, sample_col, date_column, weight_col}
+        role_columns.update(requested_eval_cols)
         requested_features = kwargs.get("feature_columns")
         excluded = set(kwargs.get("exclude_columns", []))
         if requested_features is None:

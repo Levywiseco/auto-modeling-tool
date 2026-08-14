@@ -1,5 +1,40 @@
 # Changelog
 
+## [3.1.2] - 2026-08-15
+
+Two defects found by an adversarial audit, both of which inflated reported model
+quality. If you have models trained with an earlier version, retrain and compare.
+
+### Fixed
+
+- **Evaluation columns were trained on as model features.** `segment_cols`,
+  `temporal_col` and `benchmark_cols` were excluded from nothing — they stayed in
+  the feature pool, went through binning and IV screening, and were selected into
+  the model whenever they carried signal.
+
+  Training on a temporal column is time leakage: the model learns "March is bad"
+  and is meaningless on an unseen month. Training on a benchmark column destroys
+  the very comparison it was configured for, and makes an external score a hard
+  dependency of production scoring. Measured on a fixture where both carried
+  signal, OOT AUC fell from 0.9987 to 0.5657 once they were excluded — the second
+  number is the model's real discrimination.
+
+  These columns are now role columns, like the target and the sample marker. The
+  Temporal_Stability, Benchmark_Performance and Segment_Summary report sheets are
+  unaffected, and the scoring artifact no longer demands columns the model never
+  uses.
+
+- **KS was inflated by tied scores.** `calculate_ks` took the maximum cumulative
+  TPR/FPR gap over every row rather than only where a threshold could fall, so
+  samples sharing a score were treated as separable. A constant score — zero
+  discrimination — reported KS 0.924 when the input arrived sorted by label.
+
+  Continuous probabilities were unaffected, which is why this survived: it bites
+  exactly where credit work lives, on scorecard integer points, coarse binned
+  scores and rule-engine outputs. KS is now read only at the end of each tied
+  group and matches the sklearn ROC definition on every case tested, weighted and
+  unweighted.
+
 ## [3.1.1] - 2026-08-15
 
 ### Fixed
