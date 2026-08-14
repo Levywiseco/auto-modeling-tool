@@ -103,7 +103,11 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
         "target_col": target_col,
         "target_mode": target_mode,
         "model_type": algorithm,
-        "target_transform": shared.get("target_transform"),
+        "target_transform": _first(
+            modeling,
+            ["target_transform"],
+            shared.get("target_transform"),
+        ),
         "output_dir": _resolve_path(output_dir, config_path),
         "test_size": float(test_size if test_size is not None else 0.2),
         "n_bins": int(_first(binning, ["n_bins"], 10)),
