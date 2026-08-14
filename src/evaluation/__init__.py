@@ -30,6 +30,12 @@ from .stability import (
     psi_level,
 )
 
+from .quality_gate import (
+    ReleaseCheck,
+    ReleaseValidationResult,
+    validate_release,
+)
+
 __all__ = [
     # Metrics
     "accuracy",
@@ -54,4 +60,7 @@ __all__ = [
     "bin_distribution",
     "psi_from_distributions",
     "psi_level",
+    "ReleaseCheck",
+    "ReleaseValidationResult",
+    "validate_release",
 ]
