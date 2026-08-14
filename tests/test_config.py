@@ -68,3 +68,25 @@ def test_non_logistic_algorithm_is_rejected_until_task_abstraction_is_ready():
                 "modeling": {"algorithm": "lightgbm"},
             }
         )
+
+
+def test_regression_config_maps_task_controls(tmp_path: Path):
+    config_path = tmp_path / "regression.yaml"
+    config_path.write_text(
+        """
+shared:
+  bad_col: loss
+  target_mode: regression
+data:
+  path: data/regression.csv
+modeling:
+  algorithm: linear
+  target_transform: log1p
+""",
+        encoding="utf-8",
+    )
+
+    kwargs = config_to_pipeline_kwargs(load_pipeline_config(config_path))
+    assert kwargs["target_mode"] == "regression"
+    assert kwargs["model_type"] == "linear"
+    assert kwargs["target_transform"] == "log1p"
