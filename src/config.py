@@ -63,7 +63,9 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
     output = config.get("output", {}) or {}
     variables = config.get("variables", {}) or {}
 
-    algorithm = _first(modeling, ["algorithm", "model_type"], "logistic")
+    target_mode = str(shared.get("target_mode", "classification")).lower()
+    default_algorithm = "xgboost" if target_mode == "regression" else "logistic"
+    algorithm = _first(modeling, ["algorithm", "model_type"], default_algorithm)
     if isinstance(modeling.get("algorithms"), list) and "algorithm" not in modeling:
         first_algorithm = modeling["algorithms"][0] if modeling["algorithms"] else {}
         algorithm = (
@@ -99,6 +101,9 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
         "data_path": _resolve_path(data_path, config_path),
         "data_encoding": data.get("encoding", "utf-8"),
         "target_col": target_col,
+        "target_mode": target_mode,
+        "model_type": algorithm,
+        "target_transform": shared.get("target_transform"),
         "output_dir": _resolve_path(output_dir, config_path),
         "test_size": float(test_size if test_size is not None else 0.2),
         "n_bins": int(_first(binning, ["n_bins"], 10)),
@@ -121,11 +126,18 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
         "monotonic": bool(_first(binning, ["monotonic"], False)),
         "exclude_columns": list(_first(variables, ["exclude_columns"], []) or []),
     }
-    if algorithm not in {"logistic", "xgboost", "lightgbm"}:
+    allowed = (
+        {"logistic"}
+        if target_mode == "classification"
+        else {"linear", "linear_regression", "tree", "random_forest", "xgboost", "lightgbm", "catboost"}
+    )
+    if algorithm not in allowed:
         raise ValueError(
-            f"Unsupported algorithm in current CLI: {algorithm!r}. "
-            "P1 currently supports the classification pipeline entry point."
+            f"Unsupported {target_mode} algorithm: {algorithm!r}. "
+            f"Allowed values: {sorted(allowed)}"
         )
+    if target_mode not in {"classification", "regression"}:
+        raise ValueError("shared.target_mode must be classification or regression")
     if not kwargs["data_path"]:
         raise ValueError("Config must define data.path or data.input_path")
     if not kwargs["target_col"]:
