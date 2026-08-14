@@ -31,6 +31,7 @@ def run_modeling_pipeline(
     min_samples_bin: int = 50,
     monotonic: bool = False,
     exclude_columns: Optional[list[str]] = None,
+    data_encoding: str = "utf-8",
 ) -> Dict[str, Any]:
     """Run the shared AutoPipeline implementation."""
     pipeline = AutoPipeline(
@@ -59,6 +60,7 @@ def run_modeling_pipeline(
         min_samples_bin=min_samples_bin,
         monotonic=monotonic,
         exclude_columns=exclude_columns or [],
+        encoding=data_encoding,
     )
     metrics = pipeline.evaluate()
     pipeline.save(output_dir)
