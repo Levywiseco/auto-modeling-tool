@@ -139,7 +139,7 @@ python -m src.main --config configs/pipeline_config.yaml
 独立工具：
 
 ```bash
-python scripts/score_new_samples.py --model-pkl output/scoring_artifact.pkl --input new.csv
+python scripts/score_new_samples.py --model output/scoring_artifact.pkl --input new.csv --output output/new_scores.csv
 python scripts/evaluate_model_performance.py --input scored.csv --target target --score-column pred_proba
 python scripts/explore_dataset.py --input data.csv --target target --sample-column sample --output eda.xlsx
 python scripts/validate_release.py --model-dir output --report output/Model_Report_1.xlsx
