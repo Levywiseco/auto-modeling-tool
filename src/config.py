@@ -62,10 +62,14 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
     modeling = config.get("modeling", {}) or {}
     output = config.get("output", {}) or {}
     variables = config.get("variables", {}) or {}
+    evaluation = config.get("evaluation", {}) or {}
+    scoring = config.get("scoring", {}) or {}
 
     target_mode = str(shared.get("target_mode", "classification")).lower()
     default_algorithm = "xgboost" if target_mode == "regression" else "logistic"
-    algorithm = _first(modeling, ["algorithm", "model_type"], default_algorithm)
+    algorithm = str(
+        _first(modeling, ["algorithm", "model_type"], default_algorithm)
+    ).lower()
     if isinstance(modeling.get("algorithms"), list) and "algorithm" not in modeling:
         first_algorithm = modeling["algorithms"][0] if modeling["algorithms"] else {}
         algorithm = (
@@ -108,6 +112,24 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
             ["target_transform"],
             shared.get("target_transform"),
         ),
+        "model_params": dict(
+            modeling.get("model_params", modeling.get("params", {})) or {}
+        ),
+        "early_stopping_eval": _first(
+            modeling,
+            ["early_stopping_eval"],
+            "none",
+        ),
+        "early_stopping_rounds": _first(
+            modeling,
+            ["early_stopping_rounds"],
+            None,
+        ),
+        "early_stopping_metric": _first(
+            modeling,
+            ["early_stopping_metric"],
+            None,
+        ),
         "output_dir": _resolve_path(output_dir, config_path),
         "test_size": float(test_size if test_size is not None else 0.2),
         "n_bins": int(_first(binning, ["n_bins"], 10)),
@@ -119,6 +141,14 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
         "random_state": int(
             _first(shared, ["random_state"], data.get("random_state", 42))
         ),
+        "use_sample_weight": bool(
+            _first(shared, ["use_sample_weight"], False)
+        ),
+        "weight_col": _first(
+            shared,
+            ["weight_col", "weight_column"],
+            data.get("weight_col"),
+        ),
         "sample_col": sample_col,
         "date_column": date_column,
         "oot_start": oot_start,
@@ -128,12 +158,44 @@ def config_to_pipeline_kwargs(config: Dict[str, Any]) -> Dict[str, Any]:
         "normalize_method": _first(preprocess, ["normalize_method"], "zscore"),
         "min_samples_bin": int(_first(binning, ["min_samples_bin"], 50)),
         "monotonic": bool(_first(binning, ["monotonic"], False)),
+        "smoothing": float(_first(binning, ["smoothing", "smoothing_value"], 0.5)),
         "exclude_columns": list(_first(variables, ["exclude_columns"], []) or []),
+        "segment_cols": list(
+            _first(evaluation, ["segment_cols", "segment_columns"], []) or []
+        ),
+        "temporal_col": _first(
+            evaluation,
+            ["temporal_col", "temporal_column"],
+        ),
+        "benchmark_cols": list(
+            _first(evaluation, ["benchmark_cols", "benchmark_columns"], []) or []
+        ),
+        "export_excel": bool(
+            _first(evaluation, ["export_excel", "export_enabled"], True)
+        ),
+        "convert_to_credit_score": bool(
+            _first(scoring, ["convert_to_credit_score"], False)
+        ),
     }
     allowed = (
-        {"logistic"}
+        {
+            "logistic",
+            "tree",
+            "random_forest",
+            "xgboost",
+            "lightgbm",
+            "catboost",
+        }
         if target_mode == "classification"
-        else {"linear", "linear_regression", "tree", "random_forest", "xgboost", "lightgbm", "catboost"}
+        else {
+            "linear",
+            "linear_regression",
+            "tree",
+            "random_forest",
+            "xgboost",
+            "lightgbm",
+            "catboost",
+        }
     )
     if algorithm not in allowed:
         raise ValueError(
