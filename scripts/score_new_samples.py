@@ -39,8 +39,16 @@ def main() -> int:
     raw = load_data(args.input)
     is_regression = artifact.get("task") == "regression"
     predictions = score_with_artifact(artifact, raw, return_proba=not is_regression)
-    output_column = "prediction" if not is_regression else "pred_value"
-    result = raw.with_columns(pl.Series(output_column, predictions))
+    output_column = "pred_proba" if not is_regression else "pred_value"
+    if is_regression:
+        result = raw.with_columns(pl.Series(output_column, predictions))
+    else:
+        # Keep ``prediction`` as a compatibility alias while exposing the
+        # probability column used by evaluate_model_performance.py.
+        result = raw.with_columns(
+            pl.Series(output_column, predictions),
+            pl.Series("prediction", predictions),
+        )
 
     scoring = artifact.get("metadata", {}).get("scoring", {})
     convert_to_credit_score = (
@@ -91,3 +99,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
