@@ -6,7 +6,8 @@ This module provides fast train/test splitting functions that work
 natively with Polars DataFrames while maintaining sklearn compatibility.
 """
 
-from typing import List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import polars as pl
@@ -303,3 +304,102 @@ def kfold_split(
     logger.info(f"✅ Created {n_splits} folds")
     
     return folds
+
+
+@dataclass(frozen=True)
+class DatasetSplit:
+    """A validated development/OOT split used by the modeling pipeline."""
+
+    dev: pl.DataFrame
+    oot: pl.DataFrame
+    strategy: str
+    sample_column: Optional[str] = None
+    date_column: Optional[str] = None
+
+    def validate(self, target_column: str) -> "DatasetSplit":
+        if target_column not in self.dev.columns or target_column not in self.oot.columns:
+            raise ValueError(
+                f"Target column '{target_column}' must exist in both dev and oot data"
+            )
+        if len(self.dev) == 0 or len(self.oot) == 0:
+            raise ValueError("Dev and OOT samples must both contain at least one row")
+        return self
+
+
+@time_it
+def split_dev_oot(
+    data: Union[pl.DataFrame, pl.LazyFrame],
+    target_column: str,
+    *,
+    sample_column: Optional[str] = None,
+    dev_label: Any = "dev",
+    oot_label: Any = "oot",
+    date_column: Optional[str] = None,
+    oot_start: Optional[Any] = None,
+    test_size: float = 0.2,
+    random_state: Optional[int] = None,
+) -> DatasetSplit:
+    """Create an explicit Dev/OOT split, with a compatibility fallback.
+
+    The preferred modes are an existing sample label column or a chronological
+    date boundary. When neither is supplied, the legacy stratified random split
+    is retained as an explicit compatibility fallback and is labeled random.
+    """
+    if isinstance(data, pl.LazyFrame):
+        data = data.collect()
+
+    if target_column not in data.columns:
+        raise ValueError(f"Target column '{target_column}' not found in data")
+    if sample_column and date_column:
+        raise ValueError("Use either sample_column or date_column, not both")
+    if sample_column and sample_column not in data.columns:
+        raise ValueError(f"Sample column '{sample_column}' not found in data")
+    if date_column and date_column not in data.columns:
+        raise ValueError(f"Date column '{date_column}' not found in data")
+
+    if sample_column:
+        available = set(data.get_column(sample_column).drop_nulls().to_list())
+        if dev_label not in available or oot_label not in available:
+            if {0, 1}.issubset(available) and dev_label == "dev" and oot_label == "oot":
+                dev_label, oot_label = 1, 0
+            else:
+                raise ValueError(
+                    f"Sample column '{sample_column}' must contain both "
+                    f"{dev_label!r} and {oot_label!r}; found {sorted(available, key=str)!r}"
+                )
+
+        result = DatasetSplit(
+            dev=data.filter(pl.col(sample_column) == dev_label),
+            oot=data.filter(pl.col(sample_column) == oot_label),
+            strategy="sample_column",
+            sample_column=sample_column,
+        )
+        return result.validate(target_column)
+
+    if date_column:
+        if oot_start is None:
+            raise ValueError("oot_start is required when date_column is supplied")
+        result = DatasetSplit(
+            dev=data.filter(pl.col(date_column) < oot_start),
+            oot=data.filter(pl.col(date_column) >= oot_start),
+            strategy="date",
+            date_column=date_column,
+        )
+        return result.validate(target_column)
+
+    logger.warning(
+        "No sample/date split supplied; using stratified random split as a "
+        "backward-compatible fallback. Prefer explicit Dev/OOT labels or dates."
+    )
+    X_dev, X_oot, y_dev, y_oot = stratified_train_test_split(
+        data,
+        target_column,
+        test_size=test_size,
+        random_state=random_state,
+    )
+    result = DatasetSplit(
+        dev=X_dev.with_columns(y_dev.alias(target_column)),
+        oot=X_oot.with_columns(y_oot.alias(target_column)),
+        strategy="random",
+    )
+    return result.validate(target_column)

@@ -72,15 +72,21 @@ class ModelTrainer(MarsBaseEstimator):
         model_type: str = "logistic",
         hyperparameter_tuning: bool = False,
         cv_folds: int = 5,
-        scoring: str = "roc_auc",
+        scoring: Optional[str] = None,
         random_state: int = 42,
+        task: str = "classification",
         n_jobs: int = -1,
         **model_params,
     ):
         self.model_type = model_type
+        self.task = task.lower()
+        if self.task not in {"classification", "regression"}:
+            raise ValueError("task must be classification or regression")
         self.hyperparameter_tuning = hyperparameter_tuning
         self.cv_folds = cv_folds
-        self.scoring = scoring
+        self.scoring = scoring or (
+            "roc_auc" if self.task == "classification" else "neg_root_mean_squared_error"
+        )
         self.random_state = random_state
         self.n_jobs = n_jobs
         self.model_params = model_params
@@ -88,10 +94,59 @@ class ModelTrainer(MarsBaseEstimator):
         self.model_: Optional[Any] = None
         self.best_params_: Dict[str, Any] = {}
         self.cv_scores_: List[float] = []
+        self.eval_metrics_: Dict[str, Any] = {}
+        self.early_stopping_rounds = self.model_params.pop(
+            "early_stopping_rounds", None
+        )
         self._is_fitted = False
     
     def _create_model(self, **params) -> Any:
-        """Create model instance based on type."""
+        """Create a classification or regression model instance."""
+        if self.task == "regression":
+            if self.model_type in {"linear", "linear_regression"}:
+                from sklearn.linear_model import LinearRegression
+                return LinearRegression(**params)
+            if self.model_type == "tree":
+                from sklearn.tree import DecisionTreeRegressor
+                return DecisionTreeRegressor(
+                    random_state=self.random_state,
+                    **params,
+                )
+            if self.model_type == "random_forest":
+                from sklearn.ensemble import RandomForestRegressor
+                return RandomForestRegressor(
+                    random_state=self.random_state,
+                    n_jobs=self.n_jobs,
+                    **params,
+                )
+            if self.model_type == "xgboost":
+                from xgboost import XGBRegressor
+                return XGBRegressor(
+                    random_state=self.random_state,
+                    eval_metric="rmse",
+                    n_jobs=self.n_jobs,
+                    **params,
+                )
+            if self.model_type == "lightgbm":
+                from lightgbm import LGBMRegressor
+                return LGBMRegressor(
+                    random_state=self.random_state,
+                    n_jobs=self.n_jobs,
+                    verbose=-1,
+                    **params,
+                )
+            if self.model_type == "catboost":
+                from catboost import CatBoostRegressor
+                return CatBoostRegressor(
+                    random_state=self.random_state,
+                    verbose=0,
+                    **params,
+                )
+            raise ValueError(
+                f"Unknown regression model type: {self.model_type}. "
+                "Use linear, tree, random_forest, xgboost, lightgbm or catboost."
+            )
+
         if self.model_type == "logistic":
             from sklearn.linear_model import LogisticRegression
             return LogisticRegression(
@@ -147,9 +202,34 @@ class ModelTrainer(MarsBaseEstimator):
                 f"Unknown model type: {self.model_type}. "
                 f"Supported types: {list(SUPPORTED_MODELS.keys())}"
             )
-    
+
     def _get_param_grid(self) -> Dict[str, List]:
         """Get default parameter grid for hyperparameter tuning."""
+        if self.task == "regression":
+            return {
+                "linear": {},
+                "tree": {
+                    "max_depth": [3, 5, 7, 10],
+                    "min_samples_split": [2, 5, 10],
+                    "min_samples_leaf": [1, 5, 10],
+                },
+                "random_forest": {
+                    "n_estimators": [50, 100, 200],
+                    "max_depth": [5, 10, 15],
+                    "min_samples_split": [2, 5, 10],
+                },
+                "xgboost": {
+                    "n_estimators": [50, 100, 200],
+                    "max_depth": [3, 5, 7],
+                    "learning_rate": [0.01, 0.1, 0.2],
+                },
+                "lightgbm": {
+                    "n_estimators": [50, 100, 200],
+                    "max_depth": [3, 5, 7],
+                    "learning_rate": [0.01, 0.1, 0.2],
+                },
+            }.get(self.model_type, {})
+
         param_grids = {
             "logistic": {
                 "C": [0.01, 0.1, 1.0, 10.0],
@@ -186,45 +266,96 @@ class ModelTrainer(MarsBaseEstimator):
         y: Union[np.ndarray, pl.Series],
         **kwargs,
     ) -> "ModelTrainer":
-        """
-        Fit the model to training data.
-        
-        Parameters
-        ----------
-        X : np.ndarray or pl.DataFrame
-            Training features.
-        y : np.ndarray or pl.Series
-            Training target.
-        **kwargs
-            Additional parameters.
-            
-        Returns
-        -------
-        self
-            Fitted trainer instance.
-        """
+        """Fit the configured model with optional weights and validation data."""
         if isinstance(X, pl.DataFrame):
             X = X.to_numpy()
         if isinstance(y, pl.Series):
             y = y.to_numpy()
-        
+
         X = np.nan_to_num(X, nan=0.0)
-        
         logger.info(f"🤖 Training {self.model_type} model...")
         logger.info(f"   Training samples: {len(X)}")
-        
+
+        fit_kwargs: Dict[str, Any] = {}
+        if kwargs.get("sample_weight") is not None:
+            fit_kwargs["sample_weight"] = np.asarray(kwargs["sample_weight"])
+
+        eval_set = kwargs.get("eval_set")
+        eval_y = kwargs.get("eval_y")
+        early_rounds = kwargs.get(
+            "early_stopping_rounds",
+            self.early_stopping_rounds,
+        )
+        if eval_set is not None and eval_y is not None:
+            eval_x = (
+                eval_set.to_numpy()
+                if isinstance(eval_set, pl.DataFrame)
+                else np.asarray(eval_set)
+            )
+            fit_kwargs["eval_set"] = [
+                (np.nan_to_num(eval_x, nan=0.0), np.asarray(eval_y))
+            ]
+            if kwargs.get("eval_sample_weight") is not None:
+                fit_kwargs["sample_weight_eval_set"] = [
+                    np.asarray(kwargs["eval_sample_weight"])
+                ]
+
         if self.hyperparameter_tuning:
-            self._tune_hyperparameters(X, y)
+            self._tune_hyperparameters(
+                X,
+                y,
+                sample_weight=fit_kwargs.get("sample_weight"),
+            )
         else:
-            self.model_ = self._create_model(**self.model_params)
-            self.model_.fit(X, y)
-        
+            model_params = dict(self.model_params)
+            if (
+                early_rounds
+                and fit_kwargs.get("eval_set")
+                and self.model_type == "xgboost"
+            ):
+                model_params["early_stopping_rounds"] = int(early_rounds)
+            self.model_ = self._create_model(**model_params)
+            if early_rounds and fit_kwargs.get("eval_set"):
+                if self.model_type == "lightgbm":
+                    try:
+                        from lightgbm import early_stopping
+                        fit_kwargs["callbacks"] = [
+                            early_stopping(int(early_rounds), verbose=False)
+                        ]
+                    except ImportError:
+                        pass
+                elif self.model_type == "catboost":
+                    fit_kwargs["early_stopping_rounds"] = int(early_rounds)
+            try:
+                self.model_.fit(X, y, **fit_kwargs)
+            except TypeError:
+                fallback = {
+                    key: value for key, value in fit_kwargs.items()
+                    if key not in {
+                        "sample_weight_eval_set",
+                        "callbacks",
+                        "early_stopping_rounds",
+                    }
+                }
+                self.model_.fit(X, y, **fallback)
+
+        self.eval_metrics_ = {}
+        if hasattr(self.model_, "evals_result"):
+            try:
+                self.eval_metrics_ = self.model_.evals_result()
+            except Exception:
+                self.eval_metrics_ = {}
         self._is_fitted = True
-        logger.info(f"✅ Model trained successfully")
-        
+        logger.info("✅ Model trained successfully")
         return self
-    
-    def _tune_hyperparameters(self, X: np.ndarray, y: np.ndarray) -> None:
+
+    def _tune_hyperparameters(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        *,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
         """Perform hyperparameter tuning using GridSearchCV."""
         from sklearn.model_selection import GridSearchCV
         
@@ -236,7 +367,12 @@ class ModelTrainer(MarsBaseEstimator):
                 f"using default parameters"
             )
             self.model_ = self._create_model(**self.model_params)
-            self.model_.fit(X, y)
+            fit_kwargs = (
+                {"sample_weight": sample_weight}
+                if sample_weight is not None
+                else {}
+            )
+            self.model_.fit(X, y, **fit_kwargs)
             return
         
         logger.info(f"   Performing hyperparameter tuning with {self.cv_folds}-fold CV...")
@@ -252,7 +388,12 @@ class ModelTrainer(MarsBaseEstimator):
             verbose=0,
         )
         
-        grid_search.fit(X, y)
+        fit_kwargs = (
+            {"sample_weight": sample_weight}
+            if sample_weight is not None
+            else {}
+        )
+        grid_search.fit(X, y, **fit_kwargs)
         
         self.model_ = grid_search.best_estimator_
         self.best_params_ = grid_search.best_params_
@@ -300,6 +441,8 @@ class ModelTrainer(MarsBaseEstimator):
         """
         if not self._is_fitted:
             raise ValidationError("Model not fitted. Call fit() first.")
+        if self.task == "regression":
+            raise ValidationError("Regression models do not expose class probabilities")
         
         if isinstance(X, pl.DataFrame):
             X = X.to_numpy()
@@ -357,10 +500,13 @@ class ModelTrainer(MarsBaseEstimator):
         
         summary = {
             "model_type": self.model_type,
+            "task": self.task,
             "model_class": type(self.model_).__name__,
             "hyperparameter_tuning": self.hyperparameter_tuning,
             "best_params": self.best_params_,
             "random_state": self.random_state,
+            "early_stopping_rounds": self.early_stopping_rounds,
+            "eval_metrics": self.eval_metrics_,
         }
         
         if hasattr(self.model_, 'n_features_in_'):
@@ -384,8 +530,12 @@ class ModelTrainer(MarsBaseEstimator):
         save_data = {
             "model": self.model_,
             "model_type": self.model_type,
+            "task": self.task,
+            "scoring": self.scoring,
             "best_params": self.best_params_,
             "random_state": self.random_state,
+            "early_stopping_rounds": self.early_stopping_rounds,
+            "eval_metrics": self.eval_metrics_,
         }
         
         joblib.dump(save_data, path)
@@ -401,10 +551,14 @@ class ModelTrainer(MarsBaseEstimator):
         
         trainer = cls(
             model_type=data["model_type"],
+            task=data.get("task", "classification"),
+            scoring=data.get("scoring"),
             random_state=data.get("random_state", 42),
+            early_stopping_rounds=data.get("early_stopping_rounds"),
         )
         trainer.model_ = data["model"]
         trainer.best_params_ = data.get("best_params", {})
+        trainer.eval_metrics_ = data.get("eval_metrics", {})
         trainer._is_fitted = True
         
         return trainer

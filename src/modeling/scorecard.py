@@ -127,110 +127,88 @@ class ScorecardBuilder:
         for idx, feature in enumerate(self.feature_names_):
             coef = self.coefficients_[idx]
 
-            # Get WOE values for this feature
-            woe_values = bin_woes.get(feature, [])
-            bin_edges = bin_cuts.get(feature, [])
+            model_feature = feature
+            raw_feature = feature[:-4] if feature.endswith("_bin") else feature
+            coef = self.coefficients_[idx]
 
-            # Calculate points for each bin
-            for bin_idx, woe in enumerate(woe_values):
-                # Points = (coefficient * WOE) * factor
-                points = round(coef * woe * self.factor_, 0)
+            # WoeBinner stores {bin_index: woe}; iterating the dict itself
+            # previously used bin indexes as WOE values and corrupted points.
+            woe_values = bin_woes.get(raw_feature, {})
+            bin_edges = bin_cuts.get(raw_feature, [])
+            bin_labels = getattr(self.binner_, "bin_mappings_", {}).get(raw_feature, {})
 
-                # Create bin label
-                if bin_edges and bin_idx < len(bin_edges) - 1:
-                    bin_label = f"[{bin_edges[bin_idx]:.2f}, {bin_edges[bin_idx + 1]:.2f})"
-                else:
-                    bin_label = f"bin_{bin_idx}"
+            for bin_idx, woe in sorted(woe_values.items(), key=lambda item: item[0]):
+                points = coef * float(woe) * self.factor_
+                bin_label = bin_labels.get(bin_idx)
+                if bin_label is None:
+                    if bin_edges and isinstance(bin_idx, int) and 0 <= bin_idx < len(bin_edges) - 1:
+                        bin_label = f"[{bin_edges[bin_idx]:.2f}, {bin_edges[bin_idx + 1]:.2f})"
+                    else:
+                        bin_label = f"bin_{bin_idx}"
 
                 rows.append({
-                    "Variable": feature,
+                    "Variable": model_feature,
+                    "RawVariable": raw_feature,
+                    "BinIndex": int(bin_idx),
                     "Bin": bin_label,
-                    "WOE": round(woe, 4),
-                    "Coefficient": round(coef, 4),
-                    "Points": int(points),
+                    "WOE": round(float(woe), 4),
+                    "Coefficient": round(float(coef), 4),
+                    "Points": int(round(points, 0)) if self.round_scores else float(points),
                 })
 
         self.scorecard_ = pl.DataFrame(rows)
 
     def _get_variable_points(self, variable: str, bin_idx: int) -> int:
-        """Get points for a specific variable and bin."""
+        """Get points for a variable/bin using the fitted bin mapping."""
         if self.scorecard_ is None:
             raise RuntimeError("Scorecard not built. Call fit() first.")
 
+        raw_feature = variable[:-4] if variable.endswith("_bin") else variable
+        label = getattr(self.binner_, "bin_mappings_", {}).get(
+            raw_feature, {}
+        ).get(bin_idx, f"bin_{bin_idx}")
         row = self.scorecard_.filter(
-            (pl.col("Variable") == variable) & (pl.col("Bin") == f"bin_{bin_idx}")
+            (pl.col("Variable") == variable) & (pl.col("BinIndex") == bin_idx)
         )
-
         if len(row) == 0:
-            return 0
-
-        return row["Points"][0]
+            row = self.scorecard_.filter(
+                (pl.col("RawVariable") == raw_feature) & (pl.col("Bin") == label)
+            )
+        return int(row["Points"][0]) if len(row) else 0
 
     def score(
         self,
         X: Union[pl.DataFrame, np.ndarray],
     ) -> np.ndarray:
-        """
-        Calculate scorecard scores.
-
-        Parameters
-        ----------
-        X : pl.DataFrame or np.ndarray
-            Input features (original values, not WOE-encoded).
-
-        Returns
-        -------
-        np.ndarray
-            Calculated scores.
-        """
+        """Calculate scores from raw driver values."""
         if self.scorecard_ is None:
             raise RuntimeError("Scorecard not built. Call fit() first.")
 
-        # Transform to WOE first
         if isinstance(X, np.ndarray):
             X = pl.DataFrame(X, schema=self.feature_names_)
+        X_bins = self.binner_.transform(X, return_type="index")
+        scores = np.full(len(X), self.offset_, dtype=float)
 
-        X_woe = self.binner_.transform(X, return_type="woe")
-
-        # Select only the features used in scorecard
-        woe_cols = [c for c in X_woe.columns if c.endswith("_bin")]
-        X_woe_selected = X_woe.select(woe_cols)
-
-        # Map WOE columns to feature names
-        woe_feature_map = {}
-        for col in X_woe_selected.columns:
-            # Extract feature name from bin column (remove _bin suffix)
-            feature = col.replace("_bin", "")
-            woe_feature_map[col] = feature
-
-        # Calculate base score
-        scores = np.full(len(X), self.offset_)
-
-        # Add points from each feature
-        for col in X_woe_selected.columns:
-            feature = woe_feature_map.get(col)
-            if feature not in self.feature_names_:
+        for model_feature, coef in zip(self.feature_names_, self.coefficients_):
+            raw_feature = (
+                model_feature[:-4]
+                if model_feature.endswith("_bin")
+                else model_feature
+            )
+            bin_col = f"{raw_feature}_bin"
+            if bin_col not in X_bins.columns:
                 continue
-
-            coef_idx = self.feature_names_.index(feature)
-            coef = self.coefficients_[coef_idx]
-
-            woe_values = X_woe_selected[col].to_numpy()
-
-            # Calculate points for each bin
-            bin_woes = self.binner_.bin_woes_.get(feature, [])
-
-            feature_points = np.zeros(len(X))
-            for bin_idx, woe in enumerate(bin_woes):
-                mask = (woe_values == woe)
-                points = coef * woe * self.factor_
-                feature_points[mask] = points
-
+            bin_indices = X_bins[bin_col].to_numpy()
+            woe_by_bin = self.binner_.bin_woes_.get(raw_feature, {})
+            feature_points = np.zeros(len(X), dtype=float)
+            for bin_idx, woe in woe_by_bin.items():
+                feature_points[bin_indices == bin_idx] = (
+                    float(coef) * float(woe) * self.factor_
+                )
             scores += feature_points
 
         if self.round_scores:
             scores = np.round(scores).astype(int)
-
         return scores
 
     def predict(

@@ -156,3 +156,16 @@ class TestPSI:
         psi, table = calculate_psi(expected, actual, bin_type="uniform")
         
         assert psi > 0
+
+
+def test_metrics_handle_one_class_evaluation_slice():
+    from src.evaluation.metrics import calculate_all_metrics
+
+    metrics = calculate_all_metrics(
+        [1, 1, 1],
+        [1, 1, 0],
+        [0.9, 0.8, 0.2],
+        sample_weight=[1.0, 2.0, 1.0],
+    )
+    assert metrics["auc_roc"] == 0.5
+    assert metrics["ks_statistic"] == 0.0

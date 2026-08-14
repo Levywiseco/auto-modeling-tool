@@ -1,0 +1,53 @@
+# Canonical configuration for the leakage-safe modeling pipeline.
+# Paths are resolved relative to this file.
+
+shared:
+  target_mode: classification
+  bad_col: target
+  sample_col: sample
+  dev_label: dev
+  oot_label: oot
+  random_state: 42
+  use_sample_weight: false
+  weight_col: weight
+  target_transform: null
+
+data:
+  path: data/dataset.csv
+  encoding: utf-8
+
+output:
+  dir: output
+
+preprocess:
+  clean_strategy: median
+  normalize_method: zscore
+
+binning:
+  n_bins: 10
+  method: quantile
+  min_samples_bin: 50
+  smoothing: 0.5
+  monotonic: false
+
+feature_screening:
+  method: iv
+  n_features: 20
+
+modeling:
+  # Supported classification algorithms: logistic, tree, random_forest,
+  # xgboost, lightgbm, catboost.
+  algorithm: logistic
+  model_params: {}
+  early_stopping_eval: none
+  early_stopping_rounds: 30
+  early_stopping_metric: logloss
+
+evaluation:
+  segment_cols: []
+  temporal_col: null
+  benchmark_cols: []
+  export_excel: true
+
+scoring:
+  convert_to_credit_score: false

@@ -35,6 +35,7 @@ def select_features(
     threshold: float = 0.01,
     correlation_threshold: float = 0.95,
     iv_threshold: float = 0.02,
+    sample_weight: Optional[Union[pl.Series, np.ndarray]] = None,
 ) -> List[str]:
     """
     Select features based on the specified method.
@@ -88,7 +89,9 @@ def select_features(
     elif method == "variance":
         selected = _select_by_variance(X, threshold)
     elif method == "iv":
-        selected = _select_by_iv(X, y, iv_threshold)
+        selected = _select_by_iv(
+            X, y, iv_threshold, sample_weight=sample_weight
+        )
     elif method == "mutual_info":
         selected = _select_mutual_info(X, y, n_features or 10)
     else:
@@ -207,9 +210,11 @@ def _select_by_variance(
 
 
 def _select_by_iv(
-    X: pl.DataFrame, 
-    y: np.ndarray, 
-    threshold: float
+    X: pl.DataFrame,
+    y: np.ndarray,
+    threshold: float,
+    *,
+    sample_weight: Optional[Union[pl.Series, np.ndarray]] = None,
 ) -> List[str]:
     """Select features by Information Value."""
     from ..binning.woe_binning import WoeBinner
@@ -222,7 +227,11 @@ def _select_by_iv(
     y_series = pl.Series("target", y)
     
     binner = WoeBinner(n_bins=10, method="quantile")
-    binner.fit(X.select(numeric_cols), y_series)
+    binner.fit(
+        X.select(numeric_cols),
+        y_series,
+        sample_weight=sample_weight,
+    )
     
     iv_results = binner.total_iv_
     
@@ -320,12 +329,14 @@ class FeatureSelector(MarsTransformer):
         y_np = y.to_numpy() if y is not None else None
         
         self.selected_features_ = select_features(
-            X, y_np,
+            X,
+            y_np,
             method=self.method,
             n_features=self.n_features,
             threshold=self.variance_threshold,
             correlation_threshold=self.correlation_threshold,
             iv_threshold=self.iv_threshold,
+            sample_weight=kwargs.get("sample_weight"),
         )
     
     def _transform_impl(self, X: pl.DataFrame, **kwargs) -> pl.DataFrame:

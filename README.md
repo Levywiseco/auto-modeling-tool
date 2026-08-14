@@ -119,6 +119,39 @@ df_selected = selector.fit_transform(df_woe, target_col="target")
 
 ---
 
+## 🧰 Configuration-driven pipeline | 配置驱动主流程
+
+常规建模只需要修改 `configs/pipeline_config.yaml`：
+
+```bash
+python -m src.main --config configs/pipeline_config.yaml
+```
+
+配置支持：
+
+- `shared.target_mode`: `classification` 或 `regression`
+- `shared.use_sample_weight` + `shared.weight_col`: 分箱、IV、训练、评估和 PSI 的加权开关
+- `modeling.algorithm`: `logistic`、`tree`、`random_forest`、`xgboost`、`lightgbm`
+- `modeling.early_stopping_eval`: `none`、`dev_holdout` 或显式配置的 `oot`
+- `evaluation.segment_cols`、`temporal_col`、`benchmark_cols`: 输出分群、跨期和基准对比
+- 输出包括 `scoring_artifact.pkl`、`pipeline.pkl`、多页 `Model_Report_N.xlsx`
+
+独立工具：
+
+```bash
+python scripts/score_new_samples.py --model output/scoring_artifact.pkl --input new.csv --output output/new_scores.csv
+python scripts/evaluate_model_performance.py --input scored.csv --target target --score-column pred_proba
+python scripts/explore_dataset.py --input data.csv --target target --sample-column sample --output eda.xlsx
+python scripts/validate_release.py --model-dir output --report output/Model_Report_1.xlsx
+```
+
+```text
+Release gate: artifact contract -> driver/feature contract -> report sheet contract
+             -> optional AUC/PSI thresholds -> merge/release decision
+```
+
+---
+
 ## ✨ Features | 核心功能
 
 | Feature | Description |

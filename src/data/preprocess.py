@@ -325,11 +325,13 @@ class DataPreprocessor(MarsTransformer):
         # Learned statistics
         self.stats_: Dict[str, Dict[str, float]] = {}
         self.numeric_columns_: List[str] = []
+        self.feature_columns_: List[str] = []
     
     @time_it
     def _fit_impl(self, X: pl.DataFrame, y: Optional[pl.Series] = None, **kwargs) -> None:
         """Learn statistics from training data."""
         logger.info(f"📊 Fitting preprocessor on {len(X)} rows")
+        self.feature_columns_ = list(X.columns)
         
         # Identify numeric columns
         self.numeric_columns_ = [
@@ -340,6 +342,8 @@ class DataPreprocessor(MarsTransformer):
         # Calculate statistics for each numeric column
         for col in self.numeric_columns_:
             series = X[col]
+            if X[col].dtype in [pl.Float32, pl.Float64]:
+                series = series.fill_nan(None)
             self.stats_[col] = {
                 "mean": series.mean(),
                 "std": series.std() or 1.0,
@@ -380,7 +384,10 @@ class DataPreprocessor(MarsTransformer):
             else:
                 fill_val = 0
             
-            fill_exprs.append(pl.col(col).fill_null(fill_val))
+            fill_expr = pl.col(col)
+            if X[col].dtype in [pl.Float32, pl.Float64]:
+                fill_expr = fill_expr.fill_nan(None)
+            fill_exprs.append(fill_expr.fill_null(fill_val if fill_val is not None else 0))
         
         if fill_exprs:
             X = X.with_columns(fill_exprs)

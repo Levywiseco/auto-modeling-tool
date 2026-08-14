@@ -163,3 +163,61 @@ class TestWoeBinner:
         result = binner.transform(X, return_type="index")
         
         assert isinstance(result, pl.DataFrame)
+
+
+    def test_categorical_mapping_and_unseen_values(self):
+        """Categorical levels are mapped deterministically and safely."""
+        X = pl.DataFrame({
+            "category": ["A", "A", "A", "B", "B", "B", "C", "C", None, "RARE"],
+            "numeric": list(range(10)),
+        })
+        y = pl.Series("target", [0, 1, 0, 0, 1, 1, 1, 1, 0, 0])
+
+        binner = WoeBinner(n_bins=3, min_samples_bin=2)
+        binner.fit(X, y)
+
+        scored = binner.transform(
+            pl.DataFrame({
+                "category": ["A", "UNSEEN", None, "C"],
+                "numeric": [1, 20, 3, 8],
+            }),
+            return_type="index",
+        )
+
+        assert "category" in binner.category_mappings_
+        assert scored["category_bin"].to_list()[1] == WoeBinner.IDX_OTHER
+        assert scored["category_bin"].to_list()[2] == WoeBinner.IDX_MISSING
+        assert "category" in binner.total_iv_
+
+    def test_monotonic_numeric_woe(self):
+        """Monotonic=True produces ordered WOE values for numeric bins."""
+        X = pl.DataFrame({"feature": list(range(200))})
+        y = pl.Series("target", [int(value >= 100) for value in range(200)])
+
+        binner = WoeBinner(
+            n_bins=5,
+            min_samples_bin=5,
+            monotonic=True,
+        )
+        binner.fit(X, y)
+
+        numeric_woes = binner.bin_woes_["feature"]
+        ordered = [
+            numeric_woes[index]
+            for index in sorted(index for index in numeric_woes if index >= 0)
+        ]
+        assert ordered == sorted(ordered)
+
+
+    def test_weighted_woe_and_bin_stats(self):
+        """Weights affect WOE/IV and are preserved in bin diagnostics."""
+        X = pl.DataFrame({"feature": [0.0, 0.1, 0.9, 1.0]})
+        y = pl.Series("target", [0, 1, 0, 1])
+        weights = pl.Series("weight", [1.0, 1.0, 5.0, 5.0])
+
+        weighted = WoeBinner(n_bins=2, min_samples_bin=1)
+        weighted.fit(X, y, sample_weight=weights)
+        stats = weighted.compute_bin_stats(X, y, sample_weight=weights)
+
+        assert weighted.total_iv_["feature"] >= 0
+        assert stats["count"].sum() == pytest.approx(weights.sum())

@@ -9,7 +9,7 @@ Bin index protocol (from :class:`~src.binning.WoeBinner`):
 missing = -1, other = -2, special values start at -3 descending.
 """
 
-from typing import Dict
+from typing import Dict, Optional
 
 import polars as pl
 
@@ -17,18 +17,29 @@ IDX_MISSING = -1
 IDX_OTHER = -2
 
 
-def bin_distribution(binned: pl.Series) -> Dict[int, float]:
-    """Share of rows per bin index for one binned feature column."""
-    total = binned.len()
-    if total == 0:
+def bin_distribution(
+    binned: pl.Series,
+    sample_weight: Optional[pl.Series] = None,
+) -> Dict[int, float]:
+    """Share of rows per bin index, optionally using sample weights."""
+    if binned.len() == 0:
         return {}
-    counts = binned.value_counts()
-    idx_col, cnt_col = counts.columns[0], counts.columns[1]
-    return {
-        int(idx): cnt / total
-        for idx, cnt in zip(counts[idx_col].to_list(), counts[cnt_col].to_list())
-        if idx is not None
-    }
+    if sample_weight is None:
+        weights = [1.0] * binned.len()
+    else:
+        if len(sample_weight) != len(binned):
+            raise ValueError("sample_weight must have the same length as binned")
+        weights = sample_weight.cast(pl.Float64).to_list()
+    total = float(sum(weight for weight in weights if weight is not None))
+    if total <= 0:
+        return {}
+    shares: Dict[int, float] = {}
+    for index, weight in zip(binned.to_list(), weights):
+        if index is None or weight is None:
+            continue
+        key = int(index)
+        shares[key] = shares.get(key, 0.0) + float(weight)
+    return {key: value / total for key, value in shares.items()}
 
 
 def psi_from_distributions(

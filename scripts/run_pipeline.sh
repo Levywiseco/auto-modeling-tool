@@ -1,12 +1,6 @@
 #!/bin/bash
+set -euo pipefail
 
-# This script runs the entire modeling pipeline
-
-# Activate the virtual environment if needed
-# source venv/bin/activate
-
-# Run the main Python script to execute the pipeline
-python src/main.py
-
-# Deactivate the virtual environment if it was activated
-# deactivate
+# Run from the repository root:
+#   bash scripts/run_pipeline.sh --input data.csv --target bad_flag
+python -m src.main "$@"

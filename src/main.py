@@ -1,252 +1,279 @@
 # -*- coding: utf-8 -*-
-"""
-AutoModelTool - High-Performance Auto-Modeling Pipeline
-
-This is the entry point for the auto-modeling tool, refactored to use
-Polars for high-performance data processing.
-
-Example
--------
->>> python main.py --config config.yaml
->>> python main.py --input data.csv --target target --output results/
-"""
+"""CLI entry point for the leakage-safe auto-modeling pipeline."""
 
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
-import polars as pl
-
-from .core.logger import logger
-from .core.decorators import time_it
-
-from .data.loaders import load_data
-from .data.preprocess import DataPreprocessor
-from .data.split import stratified_train_test_split
-
-from .binning.woe_binning import WoeBinner
-
-from .features.selection import FeatureSelector
-from .features.importance import calculate_feature_importance
-
-from .evaluation.metrics import calculate_all_metrics
-
-from .utils.io import save_model, save_dataframe, generate_model_report
+from .config import config_to_pipeline_kwargs, load_pipeline_config
+from .pipelines.auto_pipeline import AutoPipeline
 
 
-@time_it
 def run_modeling_pipeline(
     data_path: str,
     target_col: str,
     output_dir: str = "output",
     *,
+    target_mode: str = "classification",
+    model_type: str = "logistic",
+    model_params: Optional[Dict[str, Any]] = None,
+    target_transform: Optional[str] = None,
+    early_stopping_eval: str = "none",
+    early_stopping_rounds: Optional[int] = None,
+    early_stopping_metric: Optional[str] = None,
     test_size: float = 0.2,
     n_bins: int = 10,
     binning_method: str = "quantile",
     selection_method: str = "iv",
     n_features: int = 20,
     random_state: int = 42,
+    sample_col: Optional[str] = None,
+    date_column: Optional[str] = None,
+    oot_start: Optional[Any] = None,
+    dev_label: Any = "dev",
+    oot_label: Any = "oot",
+    clean_strategy: str = "median",
+    normalize_method: Optional[str] = "zscore",
+    min_samples_bin: int = 50,
+    monotonic: bool = False,
+    smoothing: float = 0.5,
+    exclude_columns: Optional[list[str]] = None,
+    use_sample_weight: bool = False,
+    weight_col: Optional[str] = None,
+    segment_cols: Optional[list[str]] = None,
+    temporal_col: Optional[str] = None,
+    benchmark_cols: Optional[list[str]] = None,
+    export_excel: bool = True,
+    data_encoding: str = "utf-8",
 ) -> Dict[str, Any]:
-    """
-    Run the complete auto-modeling pipeline.
-    
-    Parameters
-    ----------
-    data_path : str
-        Path to input data file.
-    target_col : str
-        Name of target column.
-    output_dir : str, default "output"
-        Directory for output files.
-    test_size : float, default 0.2
-        Proportion of data for testing.
-    n_bins : int, default 10
-        Number of bins for WOE binning.
-    binning_method : str, default "quantile"
-        Binning method: 'quantile', 'uniform', 'cart'.
-    selection_method : str, default "iv"
-        Feature selection method.
-    n_features : int, default 20
-        Number of features to select.
-    random_state : int, default 42
-        Random seed for reproducibility.
-        
-    Returns
-    -------
-    dict
-        Pipeline results including model, metrics, and paths.
-    """
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    logger.info("=" * 60)
-    logger.info("🚀 Starting AutoModelTool Pipeline")
-    logger.info("=" * 60)
-    
-    logger.info("\n📂 Step 1: Loading data...")
-    df = load_data(data_path)
-    logger.info(f"   Loaded: {df.shape[0]:,} rows × {df.shape[1]} columns")
-    
-    logger.info("\n🧹 Step 2: Preprocessing data...")
-    preprocessor = DataPreprocessor(
-        clean_strategy="median",
-        normalize_method="zscore",
-    )
-    feature_cols = [c for c in df.columns if c != target_col]
-    y = df.get_column(target_col)
-    df_clean = preprocessor.fit_transform(df, y)
-    df_clean = df_clean.with_columns(y.alias(target_col))
-    logger.info(f"   After cleaning: {df_clean.shape[0]:,} rows × {df_clean.shape[1]} columns")
-    
-    logger.info("\n✂️ Step 3: Splitting data...")
-    X_train, X_test, y_train, y_test = stratified_train_test_split(
-        df_clean,
-        target_col,
-        test_size=test_size,
-        random_state=random_state,
-    )
-    logger.info(f"   Train: {X_train.shape[0]:,} | Test: {X_test.shape[0]:,}")
-    
-    logger.info("\n📊 Step 4: WOE Binning...")
-    binner = WoeBinner(
+    """Run the classification or regression pipeline selected by config."""
+    common = {
+        "target_col": target_col,
+        "test_size": test_size,
+        "random_state": random_state,
+        "sample_col": sample_col,
+        "date_column": date_column,
+        "oot_start": oot_start,
+        "dev_label": dev_label,
+        "oot_label": oot_label,
+        "clean_strategy": clean_strategy,
+        "normalize_method": normalize_method,
+    }
+    fit_kwargs = {
+        "sample_col": sample_col,
+        "date_column": date_column,
+        "oot_start": oot_start,
+        "dev_label": dev_label,
+        "oot_label": oot_label,
+        "clean_strategy": clean_strategy,
+        "normalize_method": normalize_method,
+        "min_samples_bin": min_samples_bin,
+        "monotonic": monotonic,
+        "smoothing": smoothing,
+        "exclude_columns": exclude_columns or [],
+        "use_sample_weight": use_sample_weight,
+        "weight_col": weight_col,
+        "segment_cols": segment_cols or [],
+        "temporal_col": temporal_col,
+        "benchmark_cols": benchmark_cols or [],
+        "export_excel": export_excel,
+        "encoding": data_encoding,
+    }
+
+    if target_mode == "regression":
+        from .pipelines.regression_pipeline import RegressionPipeline
+
+        pipeline = RegressionPipeline(
+            model_type=model_type,
+            model_params=model_params,
+            target_transform=target_transform,
+            early_stopping_eval=early_stopping_eval,
+            early_stopping_rounds=early_stopping_rounds,
+            early_stopping_metric=early_stopping_metric,
+            **common,
+        )
+        pipeline.fit(data_path, **fit_kwargs)
+        metrics = pipeline.evaluate()
+        pipeline.save(output_dir)
+        return {
+            "model": pipeline.model_,
+            "metrics": metrics,
+            "feature_importance": None,
+            "selected_features": pipeline.feature_columns_,
+            "output_path": Path(output_dir),
+            "pipeline": pipeline,
+        }
+
+    if target_mode != "classification":
+        raise ValueError("target_mode must be classification or regression")
+    pipeline = AutoPipeline(
+        model_type=model_type,
+        model_params=model_params,
+        early_stopping_eval=early_stopping_eval,
+        early_stopping_rounds=early_stopping_rounds,
+        early_stopping_metric=early_stopping_metric,
         n_bins=n_bins,
-        method=binning_method,
-        min_samples_bin=50,
-    )
-    train_woe = binner.fit_transform(X_train, y_train, return_type="woe")
-    test_woe = binner.transform(X_test, return_type="woe")
-    
-    train_woe = train_woe.with_columns(y_train.alias(target_col))
-    test_woe = test_woe.with_columns(y_test.alias(target_col))
-    
-    iv_report = binner.get_iv_report()
-    logger.info(f"   Calculated IV for {len(iv_report)} features")
-    
-    save_dataframe(iv_report, output_path / "iv_report.csv")
-    
-    logger.info("\n🎯 Step 5: Feature selection...")
-    selector = FeatureSelector(
-        method=selection_method,
+        binning_method=binning_method,
+        selection_method=selection_method,
         n_features=n_features,
-        iv_threshold=0.02,
+        **common,
     )
-    
-    woe_feature_cols = [c for c in train_woe.columns if c.endswith("_bin") and c != f"{target_col}_bin"]
-    X_train_woe = train_woe.select(woe_feature_cols)
-    X_test_woe = test_woe.select(woe_feature_cols)
-    
-    X_train_selected = selector.fit_transform(X_train_woe, y_train)
-    X_test_selected = selector.transform(X_test_woe)
-    
-    selected_features = selector.get_selected_features()
-    logger.info(f"   Selected {len(selected_features)} features")
-    
-    logger.info("\n🤖 Step 6: Training model...")
-    from sklearn.linear_model import LogisticRegression
-    
-    X_train_np = X_train_selected.to_numpy()
-    X_test_np = X_test_selected.to_numpy()
-    y_train_np = y_train.to_numpy()
-    y_test_np = y_test.to_numpy()
-    
-    model = LogisticRegression(
-        random_state=random_state,
-        max_iter=1000,
-        solver='lbfgs',
-    )
-    model.fit(X_train_np, y_train_np)
-    logger.info(f"   Model trained: {type(model).__name__}")
-    
-    logger.info("\n📈 Step 7: Evaluating model...")
-    y_pred = model.predict(X_test_np)
-    y_prob = model.predict_proba(X_test_np)[:, 1]
-    
-    metrics = calculate_all_metrics(y_test_np, y_pred, y_prob)
-    
-    logger.info(f"   AUC-ROC: {metrics.get('auc_roc', 0):.4f}")
-    logger.info(f"   KS: {metrics.get('ks_statistic', 0):.4f}")
-    logger.info(f"   Accuracy: {metrics.get('accuracy', 0):.4f}")
-    
-    logger.info("\n📊 Step 8: Calculating feature importance...")
-    importance_df = calculate_feature_importance(
-        model=model,
-        X=X_train_selected,
-        y=y_train,
-        method="model",
-    )
-    
-    logger.info("\n📝 Step 9: Generating report...")
-    report_path = generate_model_report(
-        model=model,
-        metrics=metrics,
-        feature_importance=importance_df,
-        output_dir=output_path,
-        report_name="model_report",
-    )
-    
-    logger.info("\n" + "=" * 60)
-    logger.info("✅ Pipeline completed successfully!")
-    logger.info(f"📁 Results saved to: {output_path}")
-    logger.info("=" * 60)
-    
+    pipeline.fit(data_path, **fit_kwargs)
+    metrics = pipeline.evaluate()
+    pipeline.save(output_dir)
     return {
-        "model": model,
+        "model": pipeline.model_,
         "metrics": metrics,
-        "feature_importance": importance_df,
-        "selected_features": selected_features,
-        "output_path": output_path,
-        "binner": binner,
-        "selector": selector,
-        "preprocessor": preprocessor,
+        "feature_importance": pipeline.feature_importance_,
+        "selected_features": pipeline.selected_features_,
+        "output_path": Path(output_dir),
+        "pipeline": pipeline,
     }
 
 
-def main():
-    """Main entry point with CLI argument parsing."""
+def run_configured_pipeline(
+    config_path: str,
+    overrides: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Run from YAML, applying only explicitly supplied CLI overrides."""
+    config = load_pipeline_config(config_path)
+    kwargs = config_to_pipeline_kwargs(config)
+    kwargs.update(overrides or {})
+    return run_modeling_pipeline(**kwargs)
+
+
+def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
+    values = {
+        "data_path": args.input,
+        "target_col": args.target,
+        "output_dir": args.output,
+        "target_mode": args.target_mode,
+        "model_type": args.model,
+        "target_transform": args.target_transform,
+        "early_stopping_eval": args.early_stopping_eval,
+        "early_stopping_rounds": args.early_stopping_rounds,
+        "early_stopping_metric": args.early_stopping_metric,
+        "test_size": args.test_size,
+        "n_bins": args.n_bins,
+        "binning_method": args.method,
+        "selection_method": args.selection,
+        "n_features": args.n_features,
+        "random_state": args.seed,
+        "sample_col": args.sample_column,
+        "date_column": args.date_column,
+        "oot_start": args.oot_start,
+        "dev_label": args.dev_label,
+        "oot_label": args.oot_label,
+        "clean_strategy": args.clean_strategy,
+        "normalize_method": args.normalize_method,
+        "min_samples_bin": args.min_samples_bin,
+        "monotonic": args.monotonic,
+        "smoothing": args.smoothing,
+        "exclude_columns": args.exclude_column,
+        "use_sample_weight": args.use_sample_weight,
+        "weight_col": args.weight_column,
+        "segment_cols": args.segment_column,
+        "temporal_col": args.temporal_column,
+        "benchmark_cols": args.benchmark_column,
+        "data_encoding": args.encoding,
+    }
+    return {key: value for key, value in values.items() if value is not None}
+
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="AutoModelTool - High-Performance Auto-Modeling Pipeline",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python -m src.main --input data.csv --target target
-  python -m src.main --input data.parquet --target bad_flag --output results/
-  python -m src.main --input data.csv --target target --n-bins 15 --method cart
-        """
+        description="AutoModelTool - configuration-driven Dev/OOT pipeline"
     )
-    
-    parser.add_argument("--input", "-i", required=True, help="Input data file path")
-    parser.add_argument("--target", "-t", required=True, help="Target column name")
-    parser.add_argument("--output", "-o", default="output", help="Output directory")
-    parser.add_argument("--test-size", type=float, default=0.2, help="Test set proportion")
-    parser.add_argument("--n-bins", type=int, default=10, help="Number of WOE bins")
-    parser.add_argument("--method", default="quantile", choices=["quantile", "uniform", "cart"])
-    parser.add_argument("--selection", default="iv", choices=["iv", "correlation", "rfe", "variance"])
-    parser.add_argument("--n-features", type=int, default=20, help="Number of features to select")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    
-    args = parser.parse_args()
-    
+    parser.add_argument("--config", help="Canonical YAML pipeline configuration")
+    parser.add_argument("--input", "-i", help="Input data file path")
+    parser.add_argument("--target", "-t", help="Target column name")
+    parser.add_argument("--output", "-o", help="Output directory")
+    parser.add_argument("--target-mode", choices=["classification", "regression"])
+    parser.add_argument("--model", choices=[
+        "logistic", "linear", "linear_regression", "tree",
+        "random_forest", "xgboost", "lightgbm", "catboost",
+    ])
+    parser.add_argument("--target-transform", choices=["log1p"])
+    parser.add_argument(
+        "--early-stopping-eval",
+        choices=["none", "dev_holdout", "oot"],
+    )
+    parser.add_argument("--early-stopping-rounds", type=int)
+    parser.add_argument("--early-stopping-metric")
+    parser.add_argument("--test-size", type=float, help="Random fallback OOT proportion")
+    parser.add_argument("--n-bins", type=int)
+    parser.add_argument("--method", choices=["quantile", "uniform", "cart"])
+    parser.add_argument("--selection", choices=["iv", "correlation", "rfe", "variance"])
+    parser.add_argument("--n-features", type=int)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--sample-column", help="Column containing Dev/OOT labels")
+    parser.add_argument("--date-column", help="Date column for chronological split")
+    parser.add_argument("--oot-start", help="First date/value included in OOT")
+    parser.add_argument("--dev-label")
+    parser.add_argument("--oot-label")
+    parser.add_argument(
+        "--clean-strategy",
+        choices=["mean", "median", "zero", "forward", "backward"],
+    )
+    parser.add_argument("--normalize-method", choices=["minmax", "zscore", "robust"])
+    parser.add_argument("--min-samples-bin", type=int)
+    parser.add_argument("--monotonic", action="store_true", default=None)
+    parser.add_argument("--smoothing", type=float)
+    parser.add_argument("--use-sample-weight", action="store_true", default=None)
+    parser.add_argument("--weight-column")
+    parser.add_argument("--segment-column", action="append")
+    parser.add_argument("--temporal-column")
+    parser.add_argument("--benchmark-column", action="append")
+    parser.add_argument("--encoding")
+    parser.add_argument(
+        "--exclude-column",
+        action="append",
+        help="Column excluded from modeling; repeat for multiple columns",
+    )
+    return parser
+
+def main() -> int:
+    args = _parser().parse_args()
+    overrides = _cli_overrides(args)
+
     try:
-        results = run_modeling_pipeline(
-            data_path=args.input,
-            target_col=args.target,
-            output_dir=args.output,
-            test_size=args.test_size,
-            n_bins=args.n_bins,
-            binning_method=args.method,
-            selection_method=args.selection,
-            n_features=args.n_features,
-            random_state=args.seed,
+        if args.config:
+            results = run_configured_pipeline(args.config, overrides)
+        else:
+            if not args.input or not args.target:
+                raise ValueError("--input and --target are required unless --config is used")
+            defaults = {
+                "data_path": args.input,
+                "target_col": args.target,
+                "output_dir": args.output or "output",
+                "target_mode": args.target_mode or "classification",
+                "model_type": args.model or "logistic",
+                "target_transform": args.target_transform,
+                "early_stopping_eval": args.early_stopping_eval or "none",
+                "early_stopping_rounds": args.early_stopping_rounds,
+                "early_stopping_metric": args.early_stopping_metric,
+                "test_size": args.test_size if args.test_size is not None else 0.2,
+                "n_bins": args.n_bins if args.n_bins is not None else 10,
+                "binning_method": args.method or "quantile",
+                "selection_method": args.selection or "iv",
+                "n_features": args.n_features if args.n_features is not None else 20,
+                "random_state": args.seed if args.seed is not None else 42,
+            }
+            defaults.update(overrides)
+            results = run_modeling_pipeline(**defaults)
+
+        metrics = results["metrics"]
+        metric = metrics.get(
+            "auc_roc",
+            metrics.get("rmse", metrics.get("accuracy", float("nan"))),
         )
-        
-        print(f"\n✅ Success! Model AUC: {results['metrics'].get('auc_roc', 0):.4f}")
+        metric_name = "AUC" if "auc_roc" in metrics else (
+            "RMSE" if "rmse" in metrics else "accuracy"
+        )
+        print(f"\nSuccess. Primary metric ({metric_name}): {metric:.4f}")
         return 0
-        
-    except Exception as e:
-        logger.error(f"❌ Pipeline failed: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception as exc:
+        print(f"Pipeline failed: {exc}", file=sys.stderr)
         return 1
 
 

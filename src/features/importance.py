@@ -83,21 +83,20 @@ def calculate_feature_importance(
 
 
 def _get_model_importance(
-    model: Any, 
+    model: Any,
     X: pl.DataFrame
 ) -> pl.DataFrame:
-    """Extract feature importance from model."""
-    if hasattr(model, 'feature_importances_'):
-        importance = model.feature_importances_
-    elif hasattr(model, 'coef_'):
-        # For linear models, use absolute coefficient values
-        importance = np.abs(model.coef_).flatten()
+    """Extract feature importance from a raw estimator or ModelTrainer."""
+    estimator = getattr(model, "model_", model)
+    if hasattr(estimator, "feature_importances_"):
+        importance = estimator.feature_importances_
+    elif hasattr(estimator, "coef_"):
+        importance = np.abs(estimator.coef_).flatten()
         if len(importance) != len(X.columns):
-            # Handle multi-class case
-            importance = np.mean(np.abs(model.coef_), axis=0)
+            importance = np.mean(np.abs(estimator.coef_), axis=0)
     else:
         raise ValueError(
-            "Model does not have feature_importances_ or coef_ attribute. "
+            "Model does not have feature_importances_ or coef_ attributes. "
             "Use method='permutation' instead."
         )
     
