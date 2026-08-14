@@ -396,6 +396,19 @@ class AutoPipeline:
                     sample_weight=self._weight_dev,
                 )
                 tables["IV_Summary"] = self.binner_.get_iv_report()
+                tables["WOE_Detail"] = [
+                    {
+                        "feature": feature,
+                        "bin_idx": bin_idx,
+                        "woe": woe,
+                        "iv": self.binner_.bin_ivs_.get(feature, {}).get(bin_idx),
+                        "label": self.binner_.bin_mappings_.get(feature, {}).get(
+                            bin_idx
+                        ),
+                    }
+                    for feature, mapping in self.binner_.bin_woes_.items()
+                    for bin_idx, woe in mapping.items()
+                ]
             except Exception as exc:
                 logger.warning(f"Could not build binning tables: {exc}")
 
@@ -426,7 +439,9 @@ class AutoPipeline:
                 "feature": feature,
                 "selected": feature in self.selected_features_,
                 "selection_method": self.selection_method,
-                "iv": iv_values.get(feature.replace("_bin", feature)),
+                "iv": iv_values.get(
+                    feature[:-4] if feature.endswith("_bin") else feature
+                ),
             }
             for feature in self.woe_feature_columns_
         ]
@@ -458,7 +473,13 @@ class AutoPipeline:
                     oot_prob,
                     sample_weight=self._weight_oot,
                 )
-                psi, psi_table = calculate_psi(dev_prob, oot_prob, n_bins=10)
+                psi, psi_table = calculate_psi(
+                    dev_prob,
+                    oot_prob,
+                    n_bins=10,
+                    expected_weight=self._weight_dev,
+                    actual_weight=self._weight_oot,
+                )
                 tables["Score_PSI"] = psi_table
                 tables["Stability_Summary"] = {
                     "score_psi_dev_oot": psi,
