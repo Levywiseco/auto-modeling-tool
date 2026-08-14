@@ -66,6 +66,12 @@ class AutoPipeline:
         early_stopping_eval: str = "none",
         early_stopping_rounds: Optional[int] = None,
         early_stopping_metric: Optional[str] = None,
+        convert_to_credit_score: bool = False,
+        credit_score_col: str = "pred_score",
+        base_score: float = 500.0,
+        pdo: float = 50.0,
+        min_score: float = 300.0,
+        max_score: float = 900.0,
     ):
         self.target_col = target_col
         self.test_size = test_size
@@ -84,6 +90,12 @@ class AutoPipeline:
         self.early_stopping_eval = early_stopping_eval
         self.early_stopping_rounds = early_stopping_rounds
         self.early_stopping_metric = early_stopping_metric
+        self.convert_to_credit_score = bool(convert_to_credit_score)
+        self.credit_score_col = credit_score_col
+        self.base_score = float(base_score)
+        self.pdo = float(pdo)
+        self.min_score = float(min_score)
+        self.max_score = float(max_score)
 
         self.preprocessor_: Optional[DataPreprocessor] = None
         self.binner_: Optional[WoeBinner] = None
@@ -632,6 +644,14 @@ class AutoPipeline:
                 "use_sample_weight": self.use_sample_weight_,
                 "weight_col": self.weight_col_,
                 "metrics": self.metrics_ or {},
+                "scoring": {
+                    "convert_to_credit_score": self.convert_to_credit_score,
+                    "credit_score_col": self.credit_score_col,
+                    "base_score": self.base_score,
+                    "pdo": self.pdo,
+                    "min_score": self.min_score,
+                    "max_score": self.max_score,
+                },
             },
         )
 
@@ -663,6 +683,12 @@ class AutoPipeline:
             "early_stopping_eval": self.early_stopping_eval,
             "early_stopping_rounds": self.early_stopping_rounds,
             "early_stopping_metric": self.early_stopping_metric,
+            "convert_to_credit_score": self.convert_to_credit_score,
+            "credit_score_col": self.credit_score_col,
+            "base_score": self.base_score,
+            "pdo": self.pdo,
+            "min_score": self.min_score,
+            "max_score": self.max_score,
             "weight_col": self.weight_col_,
             "use_sample_weight": self.use_sample_weight_,
             "preprocessor": self.preprocessor_,
@@ -734,6 +760,12 @@ class AutoPipeline:
             early_stopping_eval=data.get("early_stopping_eval", "none"),
             early_stopping_rounds=data.get("early_stopping_rounds"),
             early_stopping_metric=data.get("early_stopping_metric"),
+            convert_to_credit_score=data.get("convert_to_credit_score", False),
+            credit_score_col=data.get("credit_score_col", "pred_score"),
+            base_score=data.get("base_score", 500.0),
+            pdo=data.get("pdo", 50.0),
+            min_score=data.get("min_score", 300.0),
+            max_score=data.get("max_score", 900.0),
         )
         pipeline.preprocessor_ = data["preprocessor"]
         pipeline.binner_ = data["binner"]
