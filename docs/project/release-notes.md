@@ -9,6 +9,66 @@
   判定失败——这个阈值实际上是失效的。现在 PSI 与其他指标一样落进 artifact，
   流水线契约测试会断言它不丢。
 
+## 3.0.0（2026-08-14）
+
+打包规范化与代码质量修复。**唯一的破坏性变更是导入名。**
+
+### 破坏性变更
+
+- **包名 `src` → `auto_modeling_tool`**。2.x 安装后会往 site-packages 写入
+  五个通用顶层名（`src` / `tests` / `scripts` / `examples` / `build`），任何
+  同样打包的项目都会与之冲突。现在 `packages.find` 限定为
+  `auto_modeling_tool*`，全新安装只贡献一个顶层名。
+
+  迁移是查找替换，API、参数、输出零变化：
+
+  ```python
+  from src import profile_risk                    # 2.x
+  from auto_modeling_tool import profile_risk     # 3.0
+  ```
+
+  ```bash
+  python -m src.main --config ...                 # 2.x
+  python -m auto_modeling_tool.main --config ...  # 3.0
+  ```
+
+  `automodel` 命令不受影响。
+
+### 修复
+
+- **`ProbabilityCalibrator` 从来就跑不起来。** 它自 v2.0 就作为公开 API 导出，
+  但覆盖率仅 20%，没有任何测试真正调用过。两个独立缺陷叠加：内部
+  `DummyClassifier` 的基类顺序写成 `(BaseEstimator, ClassifierMixin)`，
+  sklearn 按 MRO 解析 tags，`is_classifier()` 因而判定成回归器；修好后暴露
+  更深的问题——该 dummy 的 `predict_proba` 用闭包捕获了完整概率向量、无视
+  传入的 `X`，导致交叉验证每折都长度不匹配。根因是用错工具：
+  `CalibratedClassifierCV` 用于包装分类器，无法消费已算好的分数。改用标准
+  做法（Platt 用 `LogisticRegression` 拟合原始分，isotonic 用
+  `IsotonicRegression`）。600 行过度自信分数上 Brier 0.2294 →
+  0.1781（sigmoid）/ 0.1669（isotonic）。
+- `ProbabilityCalibrator` 现在接受 `pl.Series` 作为 `y_prob`，长度不一致会
+  给出清晰报错。
+- 移除 `woe_binning` 中一处死变量赋值。
+
+### 新增
+
+- **LICENSE** —— README 与 `pyproject` 都声明 MIT，但文件从未提交，链接是死的。
+- `tests/test_standalone_tools.py` —— 覆盖 `calibration` / `cross_validation` /
+  `tuning` 这三个"导出为公开 API 但流水线不调用"的模块。校准器正是因为
+  没有测试才带病发布。
+
+### 变更
+
+- `ruff check` 归零（原 1511 errors）。约 1140 处空白/导入排序/f-string，
+  364 处 typing 现代化（`List[str]` → `list[str]`；PEP 585 在声明下界 3.9
+  上可用），81 处未使用导入。无行为变更。
+
+### 已知缺口
+
+- `calibration` / `tuning` / `cross_validation` 仍只能直接 import 使用，
+  `auto_pipeline` 不调用；`ModelTrainer` 另有一套私有调参实现。
+- 无拒绝推断、无模型层单调约束、无冠军挑战者对比。
+
 ## 2.2.0（2026-08-14）
 
 对齐 `USER_GUIDE 0.75` 的生产化加固：防泄漏的 Dev/OOT 建模、配置驱动、
