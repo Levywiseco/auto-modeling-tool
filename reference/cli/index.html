@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://levywiseco.github.io/auto-modeling-tool/reference/report-objects/">
+        <link rel="canonical" href="https://levywiseco.github.io/auto-modeling-tool/reference/cli/">
       
       
-        <link rel="prev" href="../monitoring/">
+        <link rel="prev" href="../../guide/reports/">
       
       
-        <link rel="next" href="../../project/stability/">
+        <link rel="next" href="../analysis/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Report 对象 - Auto Modeling Tool</title>
+        <title>CLI 与脚本 - Auto Modeling Tool</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#report" class="md-skip">
+        <a href="#cli" class="md-skip">
           跳转至
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Report 对象
+              CLI 与脚本
             
           </span>
         </div>
@@ -792,10 +792,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../cli/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI 与脚本
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -811,6 +838,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#python-m-srcmain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        python -m src.main
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="python -m src.main">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        输入输出
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务与模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev-oot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dev / OOT 切分
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        预处理与分箱
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        筛选与权重
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        评估与评分
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsscore_new_samplespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/score_new_samples.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsevaluate_model_performancepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/evaluate_model_performance.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsexplore_datasetpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/explore_dataset.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsvalidate_releasepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/validate_release.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -876,37 +1050,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Report 对象
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../report-objects/" class="md-nav__link">
         
   
   
@@ -922,81 +1069,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="目录">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      目录
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#dataprofilereport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DataProfileReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#binningreport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BinningReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#riskprofile" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RiskProfile
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#monitoringreport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MonitoringReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        分箱索引协议
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1151,54 +1223,126 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#dataprofilereport" class="md-nav__link">
+  <a href="#python-m-srcmain" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DataProfileReport
+        python -m src.main
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#binningreport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BinningReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#riskprofile" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RiskProfile
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#monitoringreport" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MonitoringReport
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
+    <nav class="md-nav" aria-label="python -m src.main">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        分箱索引协议
+        输入输出
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        任务与模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev-oot" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dev / OOT 切分
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        预处理与分箱
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        筛选与权重
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        评估与评分
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsscore_new_samplespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/score_new_samples.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsevaluate_model_performancepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/evaluate_model_performance.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsexplore_datasetpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/explore_dataset.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scriptsvalidate_releasepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scripts/validate_release.py
       
     </span>
   </a>
@@ -1225,225 +1369,387 @@
   
 
 
-<h1 id="report">Report 对象</h1>
-<p>所有 Report 对象共享导出方法：<code>to_markdown(max_rows=50)</code> 与
-<code>save(path)</code>。表均为 Polars DataFrame。</p>
+<h1 id="cli">CLI 与脚本参考</h1>
+<h2 id="python-m-srcmain"><code>python -m src.main</code></h2>
+<p>主流水线入口。也可以用安装后的 <code>automodel</code> 命令。</p>
+<h3 id="_1">输入输出</h3>
 <table>
 <thead>
 <tr>
-<th>对象</th>
-<th>稳定性</th>
-<th>产出于</th>
+<th>参数</th>
+<th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>DataProfileReport</code></td>
-<td>Stable</td>
-<td><code>profile_data</code></td>
+<td><code>--config</code></td>
+<td>YAML 配置路径，见<a href="../../guide/config-pipeline/">配置驱动主流程</a></td>
 </tr>
 <tr>
-<td><code>BinningReport</code></td>
-<td>Stable</td>
-<td><code>profile_risk</code>（作为 <code>.report</code>）</td>
+<td><code>--input</code> / <code>-i</code></td>
+<td>输入数据（CSV / XLSX / XLS / Parquet / PKL）</td>
 </tr>
 <tr>
-<td><code>RiskProfile</code></td>
-<td>Stable</td>
-<td><code>profile_risk</code></td>
+<td><code>--target</code> / <code>-t</code></td>
+<td>目标列名</td>
 </tr>
 <tr>
-<td><code>MonitoringReport</code></td>
-<td>Experimental</td>
-<td><code>Monitor.monitor</code></td>
+<td><code>--output</code> / <code>-o</code></td>
+<td>输出目录</td>
+</tr>
+<tr>
+<td><code>--encoding</code></td>
+<td>读 CSV 的编码，默认 <code>utf-8</code></td>
+</tr>
+<tr>
+<td><code>--exclude-column</code></td>
+<td>排除列，可重复传</td>
 </tr>
 </tbody>
 </table>
-<h2 id="dataprofilereport">DataProfileReport</h2>
+<h3 id="_2">任务与模型</h3>
 <table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>内容</th>
+<th>参数</th>
+<th>可选值</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>overview_table</code></td>
-<td>DataFrame</td>
-<td>数据集级事实（行数、坏率、重复行…）</td>
+<td><code>--target-mode</code></td>
+<td><code>classification</code> | <code>regression</code></td>
 </tr>
 <tr>
-<td><code>dq_table</code></td>
-<td>DataFrame</td>
-<td>每特征：缺失/特殊/唯一值/旗标</td>
+<td><code>--model</code></td>
+<td><code>logistic</code> | <code>tree</code> | <code>random_forest</code> | <code>xgboost</code> | <code>lightgbm</code> | <code>catboost</code>（回归另支持 <code>linear</code>）</td>
 </tr>
 <tr>
-<td><code>stats_table</code></td>
-<td>DataFrame</td>
-<td>数值特征描述统计（排除特殊值）</td>
+<td><code>--target-transform</code></td>
+<td><code>log1p</code>（仅回归）</td>
 </tr>
 <tr>
-<td><code>trend_tables</code></td>
-<td>dict</td>
-<td><code>row_count</code> / <code>missing_rate</code>（有 group_col 时）</td>
+<td><code>--early-stopping-eval</code></td>
+<td><code>none</code> | <code>dev_holdout</code> | <code>oot</code></td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
-<td>dict</td>
-<td>运行口径</td>
+<td><code>--early-stopping-rounds</code></td>
+<td>整数</td>
+</tr>
+<tr>
+<td><code>--early-stopping-metric</code></td>
+<td>如 <code>logloss</code></td>
+</tr>
+<tr>
+<td><code>--seed</code></td>
+<td>随机种子</td>
 </tr>
 </tbody>
 </table>
-<h2 id="binningreport">BinningReport</h2>
+<h3 id="dev-oot">Dev / OOT 切分</h3>
 <table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>内容</th>
+<th>参数</th>
+<th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>summary_table</code></td>
-<td>DataFrame</td>
-<td>每特征：iv / iv_strength / ks / missing_rate / n_bins / monotonic_woe / psi_max</td>
+<td><code>--sample-column</code></td>
+<td>标记 Dev/OOT 的列</td>
 </tr>
 <tr>
-<td><code>detail_table</code></td>
-<td>DataFrame</td>
-<td>每 (feature, bin)：bin_label / count / bad_rate / woe / iv</td>
+<td><code>--dev-label</code> / <code>--oot-label</code></td>
+<td>该列里代表 Dev / OOT 的值</td>
 </tr>
 <tr>
-<td><code>trend_tables</code></td>
-<td>dict</td>
-<td><code>psi</code> / <code>missing_rate</code> / <code>bad_rate</code>（有 group_col 时）</td>
+<td><code>--date-column</code></td>
+<td>按时间切分用的日期列</td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
-<td>dict</td>
-<td>分箱参数与运行口径</td>
+<td><code>--oot-start</code></td>
+<td>OOT 起始日期/值（含当天）</td>
+</tr>
+<tr>
+<td><code>--test-size</code></td>
+<td>前面都没给时，随机切出的 OOT 比例，默认 0.2</td>
 </tr>
 </tbody>
 </table>
-<h2 id="riskprofile">RiskProfile</h2>
+<h3 id="_3">预处理与分箱</h3>
 <table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>内容</th>
+<th>参数</th>
+<th>可选值</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>report</code></td>
-<td>BinningReport</td>
-<td>评估结果</td>
+<td><code>--clean-strategy</code></td>
+<td>缺失填充策略，默认 <code>median</code></td>
 </tr>
 <tr>
-<td><code>binner</code></td>
-<td>WoeBinner</td>
-<td>拟合好的分箱规则，可直接 <code>transform</code> 新数据</td>
+<td><code>--normalize-method</code></td>
+<td><code>minmax</code> | <code>zscore</code> | <code>robust</code></td>
 </tr>
 <tr>
-<td><code>features</code></td>
-<td>list[str]</td>
-<td>实际完成分箱的特征</td>
+<td><code>--n-bins</code></td>
+<td>分箱数</td>
 </tr>
 <tr>
-<td><code>target</code></td>
-<td>str</td>
-<td>目标列</td>
+<td><code>--method</code></td>
+<td><code>quantile</code> | <code>uniform</code> | <code>cart</code></td>
 </tr>
 <tr>
-<td><code>metadata</code></td>
-<td>dict</td>
-<td>运行口径</td>
+<td><code>--min-samples-bin</code></td>
+<td>每箱最小样本数</td>
 </tr>
 <tr>
-<td><code>summary_table</code> / <code>detail_table</code></td>
-<td>property</td>
-<td><code>report</code> 同名表的快捷方式</td>
+<td><code>--smoothing</code></td>
+<td>WOE 平滑系数</td>
+</tr>
+<tr>
+<td><code>--monotonic</code></td>
+<td>开启数值变量单调校准</td>
 </tr>
 </tbody>
 </table>
-<h2 id="monitoringreport">MonitoringReport</h2>
+<h3 id="_4">筛选与权重</h3>
 <table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>内容</th>
+<th>参数</th>
+<th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>summary_table</code></td>
-<td>DataFrame</td>
-<td>每特征：psi_latest / psi_max / missing_delta / status</td>
+<td><code>--selection</code></td>
+<td><code>iv</code> | <code>correlation</code> | <code>rfe</code> | <code>variance</code></td>
 </tr>
 <tr>
-<td><code>detail_table</code></td>
-<td>DataFrame</td>
-<td>每 (feature, group, bin) 分布 vs 基准</td>
+<td><code>--n-features</code></td>
+<td>保留特征数</td>
 </tr>
 <tr>
-<td><code>trend_tables</code></td>
-<td>dict</td>
-<td><code>psi</code> / <code>missing_rate</code>（+<code>bad_rate</code> / <code>score_mean</code>）</td>
+<td><code>--use-sample-weight</code></td>
+<td>开启样本权重</td>
 </tr>
 <tr>
-<td><code>features</code></td>
-<td>list[str]</td>
-<td>监控的特征</td>
-</tr>
-<tr>
-<td><code>target</code></td>
-<td>str | None</td>
-<td>目标列</td>
-</tr>
-<tr>
-<td><code>binner</code></td>
-<td>WoeBinner</td>
-<td>监控所用分箱规则</td>
-</tr>
-<tr>
-<td><code>metadata</code></td>
-<td>dict</td>
-<td>基准定义、期数、口径</td>
+<td><code>--weight-column</code></td>
+<td>权重列名</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_1">分箱索引协议</h2>
+<h3 id="_5">评估与评分</h3>
 <table>
 <thead>
 <tr>
-<th>bin_idx</th>
-<th>含义</th>
+<th>参数</th>
+<th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>0, 1, 2, …</code></td>
-<td>正常箱，从低到高</td>
+<td><code>--segment-column</code></td>
+<td>分群对比列，可重复传</td>
 </tr>
 <tr>
-<td><code>-1</code></td>
-<td>缺失（null / NaN / missing_values）</td>
+<td><code>--temporal-column</code></td>
+<td>跨期稳定性列</td>
 </tr>
 <tr>
-<td><code>-2</code></td>
-<td>其他（未匹配的类别值）</td>
+<td><code>--benchmark-column</code></td>
+<td>基准分对比列，可重复传</td>
 </tr>
 <tr>
-<td><code>-3, -4, …</code></td>
-<td>特殊值箱，按 <code>special_values</code> 顺序递减</td>
+<td><code>--convert-to-credit-score</code></td>
+<td>输出信用分列</td>
+</tr>
+<tr>
+<td><code>--credit-score-col</code></td>
+<td>信用分列名，默认 <code>pred_score</code></td>
+</tr>
+<tr>
+<td><code>--base-score</code> / <code>--pdo</code></td>
+<td>基准分与翻倍分数，默认 500 / 50</td>
+</tr>
+<tr>
+<td><code>--min-score</code> / <code>--max-score</code></td>
+<td>信用分上下限，默认 300 / 900</td>
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="scriptsscore_new_samplespy"><code>scripts/score_new_samples.py</code></h2>
+<p>拿 artifact 给新数据打分。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>scripts/score_new_samples.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--model<span class="w"> </span>output/scoring_artifact.pkl<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--input<span class="w"> </span>new.csv<span class="w"> </span>--output<span class="w"> </span>scored.csv
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--model</code></td>
+<td><strong>必填</strong>，artifact 文件、<code>pipeline.pkl</code> 或输出目录</td>
+</tr>
+<tr>
+<td><code>--input</code></td>
+<td><strong>必填</strong>，原始字段数据</td>
+</tr>
+<tr>
+<td><code>--output</code></td>
+<td><strong>必填</strong>，CSV 或 Parquet 输出路径</td>
+</tr>
+<tr>
+<td><code>--convert-to-credit-score</code></td>
+<td>追加信用分列（仅分类）</td>
+</tr>
+<tr>
+<td><code>--credit-score-col</code> / <code>--base-score</code> / <code>--pdo</code> / <code>--min-score</code> / <code>--max-score</code></td>
+<td>信用分参数</td>
+</tr>
+</tbody>
+</table>
+<p>输出列：分类 <code>pred_proba</code>（+ 兼容别名 <code>prediction</code>），回归 <code>pred_value</code>。</p>
+<hr />
+<h2 id="scriptsevaluate_model_performancepy"><code>scripts/evaluate_model_performance.py</code></h2>
+<p>对已经打好分的文件算指标。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>scripts/evaluate_model_performance.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--input<span class="w"> </span>scored.csv<span class="w"> </span>--target<span class="w"> </span>target<span class="w"> </span>--score-column<span class="w"> </span>pred_proba
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--input</code> / <code>--target</code></td>
+<td><strong>必填</strong>，打分文件与真实标签列</td>
+</tr>
+<tr>
+<td><code>--score-column</code></td>
+<td>分数列，默认 <code>prediction</code>（打分脚本的主列是 <code>pred_proba</code>，建议显式传）</td>
+</tr>
+<tr>
+<td><code>--task</code></td>
+<td><code>classification</code>（默认）| <code>regression</code></td>
+</tr>
+<tr>
+<td><code>--threshold</code></td>
+<td>分类阈值，默认 0.5</td>
+</tr>
+<tr>
+<td><code>--sample-column</code> / <code>--dev-label</code> / <code>--oot-label</code></td>
+<td>分 Dev/OOT 出指标</td>
+</tr>
+<tr>
+<td><code>--weight-column</code> / <code>--use-sample-weight</code></td>
+<td>加权指标</td>
+</tr>
+<tr>
+<td><code>--encoding</code></td>
+<td>默认 <code>utf-8</code></td>
+</tr>
+<tr>
+<td><code>--output</code></td>
+<td>结果 JSON，默认 <code>performance_report.json</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="scriptsexplore_datasetpy"><code>scripts/explore_dataset.py</code></h2>
+<p>独立 EDA，不依赖训练流程。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>scripts/explore_dataset.py<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--input<span class="w"> </span>data.csv<span class="w"> </span>--target<span class="w"> </span>target<span class="w"> </span>--sample-column<span class="w"> </span>sample<span class="w"> </span>--output<span class="w"> </span>eda.xlsx
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--input</code></td>
+<td><strong>必填</strong></td>
+</tr>
+<tr>
+<td><code>--target</code></td>
+<td>有则算 IV / PSI</td>
+</tr>
+<tr>
+<td><code>--output</code></td>
+<td>默认 <code>eda_report.json</code>，给 <code>.xlsx</code> 则出 Excel</td>
+</tr>
+<tr>
+<td><code>--sample-column</code>（别名 <code>--split-column</code>）/ <code>--dev-label</code> / <code>--oot-label</code></td>
+<td>Dev/OOT 拆分</td>
+</tr>
+<tr>
+<td><code>--weight-column</code> / <code>--use-sample-weight</code></td>
+<td>加权统计</td>
+</tr>
+<tr>
+<td><code>--exclude-column</code></td>
+<td>排除列，可重复传</td>
+</tr>
+<tr>
+<td><code>--n-bins</code></td>
+<td>分箱数，默认 20</td>
+</tr>
+<tr>
+<td><code>--export-woe-detail</code></td>
+<td>额外导出 WOE 明细</td>
+</tr>
+<tr>
+<td><code>--encoding</code></td>
+<td>默认 <code>utf-8</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="scriptsvalidate_releasepy"><code>scripts/validate_release.py</code></h2>
+<p>发布门禁，详见<a href="../../guide/release-gate/">发布门禁</a>。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--model-dir</code></td>
+<td><strong>必填</strong>，输出目录或 artifact 路径</td>
+</tr>
+<tr>
+<td><code>--report</code></td>
+<td>报告路径，不传则自动找最新 <code>Model_Report_*.xlsx</code></td>
+</tr>
+<tr>
+<td><code>--min-auc</code> / <code>--max-psi</code></td>
+<td>可选阈值门禁</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>把逐项结论写成 JSON</td>
+</tr>
+</tbody>
+</table>
+<p>失败时返回非零退出码。</p>
 
 
 
@@ -1479,7 +1785,7 @@
       <nav class="md-footer__inner md-grid" aria-label="页脚" >
         
           
-          <a href="../monitoring/" class="md-footer__link md-footer__link--prev" aria-label="上一页: Monitoring">
+          <a href="../../guide/reports/" class="md-footer__link md-footer__link--prev" aria-label="上一页: 报告与导出">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1489,20 +1795,20 @@
                 上一页
               </span>
               <div class="md-ellipsis">
-                Monitoring
+                报告与导出
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../project/stability/" class="md-footer__link md-footer__link--next" aria-label="下一页: 稳定性与兼容性">
+          <a href="../analysis/" class="md-footer__link md-footer__link--next" aria-label="下一页: Analysis">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 下一页
               </span>
               <div class="md-ellipsis">
-                稳定性与兼容性
+                Analysis
               </div>
             </div>
             <div class="md-footer__button md-icon">

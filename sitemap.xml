@@ -2,58 +2,78 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/getting-started/api-conventions/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/getting-started/installation/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/getting-started/quickstart/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/guide/binning-risk-evaluation/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
+    </url>
+    <url>
+         <loc>https://levywiseco.github.io/auto-modeling-tool/guide/config-pipeline/</loc>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/guide/data-profiling/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/guide/feature-selection/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/guide/monitoring/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
+    </url>
+    <url>
+         <loc>https://levywiseco.github.io/auto-modeling-tool/guide/regression/</loc>
+         <lastmod>2026-08-14</lastmod>
+    </url>
+    <url>
+         <loc>https://levywiseco.github.io/auto-modeling-tool/guide/release-gate/</loc>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/guide/reports/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
+    </url>
+    <url>
+         <loc>https://levywiseco.github.io/auto-modeling-tool/guide/scoring-artifact/</loc>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/project/release-notes/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/project/stability/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/reference/analysis/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
+    </url>
+    <url>
+         <loc>https://levywiseco.github.io/auto-modeling-tool/reference/cli/</loc>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/reference/monitoring/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
     <url>
          <loc>https://levywiseco.github.io/auto-modeling-tool/reference/report-objects/</loc>
-         <lastmod>2026-07-22</lastmod>
+         <lastmod>2026-08-14</lastmod>
     </url>
 </urlset>
