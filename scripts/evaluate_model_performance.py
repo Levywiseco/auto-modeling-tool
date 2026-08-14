@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 import polars as pl
@@ -27,7 +27,7 @@ def _evaluate_frame(
     target_col: str,
     score_col: str,
     threshold: float,
-    weight_col: str | None,
+    weight_col: Optional[str],
 ) -> Dict[str, float]:
     y_true = frame.get_column(target_col).to_numpy()
     score = frame.get_column(score_col).to_numpy()
