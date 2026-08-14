@@ -66,6 +66,8 @@ class Monitor:
         group_col: Optional[str] = None,
         binner: Optional[WoeBinner] = None,
         benchmark_df: Optional[Any] = None,
+        weight_col: Optional[str] = None,
+        use_sample_weight: bool = False,
     ) -> MonitoringReport:
         """Run monitoring over one dataset and return a structured report.
 
@@ -119,6 +121,24 @@ class Monitor:
             bench = df.filter(pl.col(group_col) == groups[0])
             benchmark_name = str(groups[0])
 
+        def resolve_weight(frame: pl.DataFrame) -> Optional[pl.Series]:
+            if not use_sample_weight:
+                return None
+            if not weight_col or weight_col not in frame.columns:
+                raise ValidationError(
+                    "use_sample_weight=true requires an existing weight_col"
+                )
+            weights = frame[weight_col].cast(pl.Float64)
+            values = weights.to_numpy()
+            import numpy as np
+            if not np.isfinite(values).all() or (values <= 0).any():
+                raise ValidationError(
+                    "Sample weights must be finite and strictly positive"
+                )
+            return weights
+
+        bench_weight = resolve_weight(bench)
+
         # ---- binning rules ---------------------------------------------
         if binner is None:
             params = dict(self.binner_params)
@@ -126,17 +146,25 @@ class Monitor:
             binner = WoeBinner(**params)
         if not binner._is_fitted:
             if target is not None and target in bench.columns:
-                binner.fit(bench.select(feats), bench[target])
+                binner.fit(
+                    bench.select(feats),
+                    bench[target],
+                    sample_weight=bench_weight,
+                )
             else:
                 # No target: fit unsupervised (quantile/uniform cuts only)
                 pseudo_y = pl.Series("target", [0] * bench.height)
                 binner.fit(bench.select(feats), pseudo_y)
 
-        fitted = [c for c in feats if binner.bin_cuts_.get(c)]
+        fitted = [c for c in feats if c in getattr(binner, "fitted_features_", feats)]
 
         bench_binned = binner.transform(bench.select(fitted), return_type="index")
         bench_dists = {
-            c: bin_distribution(bench_binned[f"{c}_bin"]) for c in fitted
+            c: bin_distribution(
+                bench_binned[f"{c}_bin"],
+                bench_weight,
+            )
+            for c in fitted
         }
         bench_missing = {c: bench_dists[c].get(-1, 0.0) for c in fitted}
 
@@ -150,9 +178,13 @@ class Monitor:
 
         for g in groups:
             part = df if group_col is None else df.filter(pl.col(group_col) == g)
+            part_weight = resolve_weight(part)
             part_binned = binner.transform(part.select(fitted), return_type="index")
             for c in fitted:
-                dist = bin_distribution(part_binned[f"{c}_bin"])
+                dist = bin_distribution(
+                    part_binned[f"{c}_bin"],
+                    part_weight,
+                )
                 psi = psi_from_distributions(
                     bench_dists[c],
                     dist,
@@ -237,6 +269,8 @@ class Monitor:
             "score_mean_relative_delta": score_mean_delta,
             "psi_include_missing": self.psi_include_missing,
             "psi_include_special": self.psi_include_special,
+            "weight_col": weight_col,
+            "use_sample_weight": use_sample_weight,
         }
 
         n_alert = sum(1 for r in summary_rows if r["status"] != "正常")
