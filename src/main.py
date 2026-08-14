@@ -17,7 +17,11 @@ def run_modeling_pipeline(
     *,
     target_mode: str = "classification",
     model_type: str = "logistic",
+    model_params: Optional[Dict[str, Any]] = None,
     target_transform: Optional[str] = None,
+    early_stopping_eval: str = "none",
+    early_stopping_rounds: Optional[int] = None,
+    early_stopping_metric: Optional[str] = None,
     test_size: float = 0.2,
     n_bins: int = 10,
     binning_method: str = "quantile",
@@ -33,8 +37,14 @@ def run_modeling_pipeline(
     normalize_method: Optional[str] = "zscore",
     min_samples_bin: int = 50,
     monotonic: bool = False,
+    smoothing: float = 0.5,
     exclude_columns: Optional[list[str]] = None,
+    use_sample_weight: bool = False,
     weight_col: Optional[str] = None,
+    segment_cols: Optional[list[str]] = None,
+    temporal_col: Optional[str] = None,
+    benchmark_cols: Optional[list[str]] = None,
+    export_excel: bool = True,
     data_encoding: str = "utf-8",
 ) -> Dict[str, Any]:
     """Run the classification or regression pipeline selected by config."""
@@ -60,8 +70,14 @@ def run_modeling_pipeline(
         "normalize_method": normalize_method,
         "min_samples_bin": min_samples_bin,
         "monotonic": monotonic,
+        "smoothing": smoothing,
         "exclude_columns": exclude_columns or [],
+        "use_sample_weight": use_sample_weight,
         "weight_col": weight_col,
+        "segment_cols": segment_cols or [],
+        "temporal_col": temporal_col,
+        "benchmark_cols": benchmark_cols or [],
+        "export_excel": export_excel,
         "encoding": data_encoding,
     }
 
@@ -70,7 +86,11 @@ def run_modeling_pipeline(
 
         pipeline = RegressionPipeline(
             model_type=model_type,
+            model_params=model_params,
             target_transform=target_transform,
+            early_stopping_eval=early_stopping_eval,
+            early_stopping_rounds=early_stopping_rounds,
+            early_stopping_metric=early_stopping_metric,
             **common,
         )
         pipeline.fit(data_path, **fit_kwargs)
@@ -87,12 +107,12 @@ def run_modeling_pipeline(
 
     if target_mode != "classification":
         raise ValueError("target_mode must be classification or regression")
-    if model_type != "logistic":
-        raise ValueError(
-            "The current AutoPipeline classification entry point supports logistic only"
-        )
-
     pipeline = AutoPipeline(
+        model_type=model_type,
+        model_params=model_params,
+        early_stopping_eval=early_stopping_eval,
+        early_stopping_rounds=early_stopping_rounds,
+        early_stopping_metric=early_stopping_metric,
         n_bins=n_bins,
         binning_method=binning_method,
         selection_method=selection_method,
@@ -131,6 +151,9 @@ def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
         "target_mode": args.target_mode,
         "model_type": args.model,
         "target_transform": args.target_transform,
+        "early_stopping_eval": args.early_stopping_eval,
+        "early_stopping_rounds": args.early_stopping_rounds,
+        "early_stopping_metric": args.early_stopping_metric,
         "test_size": args.test_size,
         "n_bins": args.n_bins,
         "binning_method": args.method,
@@ -146,8 +169,13 @@ def _cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
         "normalize_method": args.normalize_method,
         "min_samples_bin": args.min_samples_bin,
         "monotonic": args.monotonic,
+        "smoothing": args.smoothing,
         "exclude_columns": args.exclude_column,
+        "use_sample_weight": args.use_sample_weight,
         "weight_col": args.weight_column,
+        "segment_cols": args.segment_column,
+        "temporal_col": args.temporal_column,
+        "benchmark_cols": args.benchmark_column,
         "data_encoding": args.encoding,
     }
     return {key: value for key, value in values.items() if value is not None}
@@ -166,6 +194,12 @@ def _parser() -> argparse.ArgumentParser:
         "random_forest", "xgboost", "lightgbm", "catboost",
     ])
     parser.add_argument("--target-transform", choices=["log1p"])
+    parser.add_argument(
+        "--early-stopping-eval",
+        choices=["none", "dev_holdout", "oot"],
+    )
+    parser.add_argument("--early-stopping-rounds", type=int)
+    parser.add_argument("--early-stopping-metric")
     parser.add_argument("--test-size", type=float, help="Random fallback OOT proportion")
     parser.add_argument("--n-bins", type=int)
     parser.add_argument("--method", choices=["quantile", "uniform", "cart"])
@@ -184,7 +218,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--normalize-method", choices=["minmax", "zscore", "robust"])
     parser.add_argument("--min-samples-bin", type=int)
     parser.add_argument("--monotonic", action="store_true", default=None)
+    parser.add_argument("--smoothing", type=float)
+    parser.add_argument("--use-sample-weight", action="store_true", default=None)
     parser.add_argument("--weight-column")
+    parser.add_argument("--segment-column", action="append")
+    parser.add_argument("--temporal-column")
+    parser.add_argument("--benchmark-column", action="append")
     parser.add_argument("--encoding")
     parser.add_argument(
         "--exclude-column",
@@ -210,6 +249,9 @@ def main() -> int:
                 "target_mode": args.target_mode or "classification",
                 "model_type": args.model or "logistic",
                 "target_transform": args.target_transform,
+                "early_stopping_eval": args.early_stopping_eval or "none",
+                "early_stopping_rounds": args.early_stopping_rounds,
+                "early_stopping_metric": args.early_stopping_metric,
                 "test_size": args.test_size if args.test_size is not None else 0.2,
                 "n_bins": args.n_bins if args.n_bins is not None else 10,
                 "binning_method": args.method or "quantile",
