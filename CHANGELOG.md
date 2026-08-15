@@ -1,5 +1,73 @@
 # Changelog
 
+## [3.4.0] - 2026-08-15
+
+Last batch of the adversarial audit — the 25 medium/low findings. Five turned
+out to be false, and one of the "low" ones was the most serious defect the whole
+audit produced.
+
+### Fixed
+
+- **The credit score ran backwards.** `ScorecardBuilder.score` added
+  `coef * WOE * factor` without negating it. WOE is `ln(bad/good)`, so a larger
+  weighted sum means a worse applicant — the scale rose with risk. Measured
+  correlation with the bad probability was **+0.986**, while
+  `probability_to_credit_score` in the same module correctly ran the other way.
+  A "high score = approve" cutoff built on it would have approved the worst
+  applicants. This was reported as *low* severity; it is not.
+
+- **`ScorecardBuilder` never applied the model intercept.** It was extracted and
+  stored at fit time and then ignored, so `predict_proba` disagreed with the
+  underlying model by a constant factor in log-odds. The intercept now sits in
+  the base points, and `predict_proba` reproduces the model exactly
+  (`round_scores=False`; with rounding the residual is the integer quantisation).
+
+- **`DataPreprocessor` statistics ignored sample weights.** The mean/median that
+  imputes every missing applicant — in training and in the saved artifact —
+  described the sample rather than the population. On a fixture where the
+  population is dominated by the high group, the median moved 50.5 → 100.0 once
+  weighted.
+
+- **Lift/decile tables were not weighted.** `qcut` counts rows, so under
+  undersampling the "deciles" of the table risk teams read most held 0.6% and
+  19% of the population. Spread fell from 0.184 to 0.0005; the unweighted path
+  still uses Polars' qcut unchanged.
+
+- **`custom_null_values` was honoured in transform but ignored in fit.** The
+  sentinel was averaged into the statistic that later replaced it: with -999 as
+  "unknown", the median of `[1, 2, -999, 4, -999]` came out as 1.0 instead of
+  2.0, and every missing row was filled with that skewed value.
+
+- **`split_dev_oot` dropped rows in silence.** Rows whose sample column is
+  neither the Dev nor the OOT label take no part in training or evaluation.
+  That is often intentional, but it is now logged with the count and the
+  offending values.
+
+- **Run archives wrote invalid JSON.** NaN/Infinity metrics were serialised as
+  `NaN`/`Infinity`, which Python reads back but no strict JSON reader accepts.
+  They are stored as `null` now.
+
+- **`runs compare` reported a metric that became NaN as unchanged `(=)`.** A
+  model whose AUC turned NaN looked identical to one that had not moved.
+
+- **`resolve_run` preferred a same-named directory in the working directory**
+  over the actual archive, so a stray local folder could silently supply the
+  wrong run to a comparison. The archive is now consulted first.
+
+### Documentation
+
+Seven claims contradicted the code and are corrected: two CLI flags missing from
+the reference, a stale test count, "every config field is overridable" (two are
+not), a config key read by the loader but absent from the sample, the algorithm
+list omitting CatBoost, two undocumented `Monitor.monitor` parameters, and an
+output tree missing `model_report/`.
+
+### Not defects
+
+Five findings did not reproduce: `runs list` already tolerates unreadable
+directories, PSI's empty-bin epsilon contributes exactly 0.0, and
+`ModelTrainer`'s tuning already weights its scorer.
+
 ## [3.3.1] - 2026-08-15
 
 ### Added

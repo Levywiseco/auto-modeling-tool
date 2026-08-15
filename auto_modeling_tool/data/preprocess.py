@@ -325,6 +325,29 @@ class DataPreprocessor(MarsTransformer):
         self.numeric_columns_: list[str] = []
         self.feature_columns_: list[str] = []
 
+    @staticmethod
+    def _weighted_stats(series, weights, raw_column):
+        """Population statistics, aligned to the rows that survived filtering."""
+        import numpy as np
+
+        from ..core.stats import normalize_weights, weighted_mean, weighted_quantile
+
+        values = raw_column.to_numpy().astype(float)
+        w = normalize_weights(weights, values.size)
+        keep = np.isfinite(values)
+        if keep.sum() == 0:
+            return None
+        values, w = values[keep], w[keep]
+        return {
+            "mean": weighted_mean(values, w),
+            "std": float(
+                np.sqrt(np.average((values - weighted_mean(values, w)) ** 2, weights=w))
+            ),
+            "median": float(weighted_quantile(values, 0.5, weights=w)[0]),
+            "min": float(values.min()),
+            "max": float(values.max()),
+        }
+
     @time_it
     def _fit_impl(self, X: pl.DataFrame, y: Optional[pl.Series] = None, **kwargs) -> None:
         """Learn statistics from training data."""
@@ -342,6 +365,25 @@ class DataPreprocessor(MarsTransformer):
             series = X[col]
             if X[col].dtype in [pl.Float32, pl.Float64]:
                 series = series.fill_nan(None)
+            # transform() treats these as missing, so fit() must too. Otherwise
+            # the sentinel is averaged into the statistic that later replaces
+            # it: with -999 as "unknown", the median of [1, 2, -999, 4, -999]
+            # came out as 1.0 instead of 2.0, and every missing row was filled
+            # with that skewed value.
+            if self.custom_null_values:
+                series = series.filter(~series.is_in(self.custom_null_values))
+
+            # Statistics describe the population, not the sample. Under
+            # undersampled goods an unweighted median is the median of the
+            # sample, and it becomes the value every missing applicant is
+            # imputed with — in training and in the saved artifact alike.
+            weights = kwargs.get("sample_weight")
+            if weights is not None:
+                stats = self._weighted_stats(series, weights, X[col])
+                if stats is not None:
+                    self.stats_[col] = stats
+                    continue
+
             self.stats_[col] = {
                 "mean": series.mean(),
                 "std": series.std() or 1.0,

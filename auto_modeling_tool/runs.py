@@ -17,6 +17,7 @@ loads a pickle.
 
 import argparse
 import json
+import math
 import shutil
 import uuid
 from dataclasses import dataclass, field
@@ -114,7 +115,14 @@ def _unique_destination(runs_dir: Path, run_id: str) -> Path:
 
 
 def _jsonable(value: Any) -> Any:
-    """Coerce config values into something json.dump accepts."""
+    """Coerce values into something a strict JSON reader accepts.
+
+    json.dump writes NaN/Infinity by default, which Python reads back but which
+    is not valid JSON — any other tool reading run.json would choke. Non-finite
+    numbers become null instead.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
     if isinstance(value, Path):
         return str(value)
     if isinstance(value, dict):
@@ -250,14 +258,18 @@ def list_runs(runs_dir: Union[str, Path] = "runs") -> list[RunRecord]:
 
 def resolve_run(reference: str, runs_dir: Union[str, Path] = "runs") -> RunRecord:
     """Look up a run by exact id, unique id prefix, or directory path."""
-    direct = Path(reference)
-    if direct.is_dir() and (direct / RUN_JSON).exists():
-        return load_run(direct)
-
+    # The archive is the authority. A bare run id that happens to match a
+    # directory in the current working directory must not shadow the real run:
+    # resolving "20260815-..." to some unrelated local folder silently compares
+    # the wrong data.
     candidates = list_runs(runs_dir)
     for record in candidates:
         if record.run_id == reference:
             return record
+
+    direct = Path(reference)
+    if direct.is_dir() and (direct / RUN_JSON).exists():
+        return load_run(direct)
 
     prefixed = [r for r in candidates if r.run_id.startswith(reference)]
     if len(prefixed) == 1:
@@ -360,6 +372,9 @@ def format_comparison(diff: dict[str, Any]) -> str:
         delta = values["delta"]
         if delta is None:
             arrow = ""
+        elif isinstance(delta, float) and math.isnan(delta):
+            # A metric that turned NaN is a failure, not "no change".
+            arrow = "  (became NaN)"
         elif delta > 0:
             arrow = f"  (+{delta:.4f})"
         elif delta < 0:

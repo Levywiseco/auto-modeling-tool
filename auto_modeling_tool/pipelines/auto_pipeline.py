@@ -238,7 +238,7 @@ class AutoPipeline:
             normalize_method=kwargs.get("normalize_method", "zscore"),
             custom_null_values=kwargs.get("custom_null_values"),
         )
-        self.preprocessor_.fit(self._X_dev_raw, self._y_train)
+        self.preprocessor_.fit(self._X_dev_raw, self._y_train, sample_weight=dev_weight)
         self._X_dev_transformed = self.preprocessor_.transform(self._X_dev_raw)
         self._X_oot_transformed = self.preprocessor_.transform(self._X_oot_raw)
 
