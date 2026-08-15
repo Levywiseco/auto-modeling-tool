@@ -273,3 +273,88 @@ def test_evaluation_columns_are_not_trained_on(tmp_path):
     report = next((tmp_path / "out").glob("Model_Report_*.xlsx"))
     sheets = set(load_workbook(report, read_only=True).sheetnames)
     assert {"Temporal_Stability", "Benchmark_Performance", "Segment_Summary"} <= sheets
+
+
+def test_pipeline_fits_preprocessing_on_dev_only(tmp_path):
+    """The pipeline — not just DataPreprocessor — must never see OOT when fitting.
+
+    Mutation testing exposed this gap: changing the pipeline to fit the
+    preprocessor on Dev+OOT left all 190 tests green. The existing preprocessor
+    test only checked the transformer in isolation, so the leakage-safety the
+    whole project is built around had no coverage at the pipeline level.
+    """
+    from auto_modeling_tool.pipelines.auto_pipeline import AutoPipeline
+
+    rng = np.random.default_rng(17)
+    n_dev, n_oot = 600, 200
+    # OOT is shifted far from Dev. Statistics fitted on Dev alone must ignore it.
+    dev_values = rng.normal(0.0, 1.0, n_dev)
+    oot_values = rng.normal(50.0, 1.0, n_oot)
+    values = np.concatenate([dev_values, oot_values])
+    target = np.concatenate([
+        (dev_values > 0).astype(int),
+        (oot_values > 50).astype(int),
+    ])
+    frame = pl.DataFrame({
+        "x": values,
+        "noise": rng.normal(size=n_dev + n_oot),
+        "target": target,
+        "sample": ["dev"] * n_dev + ["oot"] * n_oot,
+    })
+
+    pipeline = AutoPipeline(target_col="target", n_bins=5, n_features=2)
+    pipeline.fit(frame, sample_col="sample", min_samples_bin=20)
+
+    stats = pipeline.preprocessor_.stats_["x"]
+    dev_mean = float(dev_values.mean())
+    pooled_mean = float(values.mean())
+
+    # Dev mean is ~0; pooling in the shifted OOT block would drag it to ~12.5.
+    assert abs(stats["mean"] - dev_mean) < 0.5, (
+        f"preprocessor mean {stats['mean']:.3f} is not Dev's {dev_mean:.3f} — "
+        f"OOT appears to have been included (pooled would be {pooled_mean:.3f})"
+    )
+
+    # Bin edges are fitted on Dev too, so no cut may sit out in OOT territory.
+    assert max(c for c in pipeline.binner_.bin_cuts_["x"] if np.isfinite(c)) < 25.0
+
+
+def test_credit_score_scale_follows_pdo():
+    """PDO sets how many points double the odds; hardcoding it goes unnoticed.
+
+    Mutation testing showed both the ScorecardBuilder factor and the standalone
+    helper could ignore their configured PDO with every test still passing.
+    """
+    probabilities = np.array([0.2, 0.5, 0.8])
+
+    narrow = probability_to_credit_score(
+        probabilities, base_score=600, pdo=20, min_score=0, max_score=1000
+    )
+    wide = probability_to_credit_score(
+        probabilities, base_score=600, pdo=80, min_score=0, max_score=1000
+    )
+
+    # A larger PDO stretches the same odds range over more points.
+    assert (wide.max() - wide.min()) > (narrow.max() - narrow.min()) * 3
+
+    # And the ratio tracks the PDO ratio directly.
+    assert (wide.max() - wide.min()) / (narrow.max() - narrow.min()) == pytest.approx(
+        4.0, rel=0.01
+    )
+
+
+def test_scorecard_builder_factor_follows_pdo():
+    """factor_ is set during fit; hardcoding it there passed every test."""
+    from auto_modeling_tool.modeling.scorecard import ScorecardBuilder
+
+    X = pl.DataFrame({"feature": np.linspace(0, 1, 40)})
+    y = pl.Series("target", [0, 1] * 20)
+    binner = WoeBinner(n_bins=2, min_samples_bin=1)
+    woe = binner.fit_transform(X, y, return_type="woe").select(["feature_bin"])
+    model = LogisticRegression(max_iter=1000).fit(woe.to_numpy(), y.to_numpy())
+
+    for pdo in (20, 50, 80):
+        card = ScorecardBuilder(base_score=600, PDO=pdo, target_odds=20).fit(
+            model, binner, feature_names=["feature_bin"]
+        )
+        assert card.factor_ == pytest.approx(pdo / np.log(2))

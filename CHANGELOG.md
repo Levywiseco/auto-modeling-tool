@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.3.1] - 2026-08-15
+
+### Added
+
+- **Tests for three behaviours mutation testing found unprotected.** Deliberately
+  breaking each of these left all 190 tests green:
+  - the pipeline fitting preprocessing on Dev+OOT instead of Dev alone — the
+    leakage-safety the project is built around had no coverage at the pipeline
+    level, only on `DataPreprocessor` in isolation
+  - `ScorecardBuilder` hardcoding its factor and ignoring the configured `PDO`
+  - `probability_to_credit_score` ignoring its `pdo` argument
+
+  All three mutants are now killed. 193 tests.
+
 ## [3.3.0] - 2026-08-15
 
 ### Added
