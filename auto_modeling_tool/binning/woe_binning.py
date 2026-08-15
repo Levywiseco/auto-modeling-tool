@@ -158,11 +158,11 @@ class WoeBinner(MarsTransformer):
 
         if valid_numeric:
             if self.method == "quantile":
-                self._fit_quantile(X, valid_numeric)
+                self._fit_quantile(X, valid_numeric, sample_weight)
             elif self.method == "uniform":
                 self._fit_uniform(X, valid_numeric)
             elif self.method == "cart":
-                self._fit_cart(X, y, valid_numeric)
+                self._fit_cart(X, y, valid_numeric, sample_weight)
             else:
                 raise ValueError(f"Unknown binning method: {self.method}")
 
@@ -206,7 +206,12 @@ class WoeBinner(MarsTransformer):
                     next_bin += 1
             self.category_mappings_[column] = mapping
 
-    def _fit_quantile(self, X: pl.DataFrame, cols: list[str]) -> None:
+    def _fit_quantile(
+        self,
+        X: pl.DataFrame,
+        cols: list[str],
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
         """
         Ultra-fast quantile binning using Polars expressions.
 
@@ -220,6 +225,15 @@ class WoeBinner(MarsTransformer):
             quantiles = np.linspace(0, 1, self.n_bins + 1)[1:-1].tolist()
 
         raw_exclude = self.special_values + self.missing_values
+
+        if sample_weight is not None:
+            # Equal-frequency has to mean equal frequency in the population, not
+            # in the sample. Under undersampled goods the unweighted cuts put
+            # 39% of the weighted population in the first "20%" bin. The Polars
+            # fast path above cannot express weighted quantiles, so weighted
+            # fits take this NumPy route instead.
+            self._fit_quantile_weighted(X, cols, quantiles, raw_exclude, sample_weight)
+            return
 
         # Build flattened expression list for all columns
         q_exprs = []
@@ -271,6 +285,40 @@ class WoeBinner(MarsTransformer):
                 unique_cuts = sorted(set(cuts))
                 self.bin_cuts_[current_col] = [float('-inf')] + unique_cuts + [float('inf')]
 
+    def _fit_quantile_weighted(
+        self,
+        X: pl.DataFrame,
+        cols: list[str],
+        quantiles: list[float],
+        raw_exclude: list[Any],
+        sample_weight: np.ndarray,
+    ) -> None:
+        """Equal-frequency cuts on the weighted population."""
+        from ..core.stats import weighted_quantile
+
+        for column in cols:
+            values = X[column].to_numpy().astype(float)
+            weights = np.asarray(sample_weight, dtype=float)
+
+            keep = np.isfinite(values)
+            safe_exclude = self._get_safe_values(X.schema[column], raw_exclude)
+            for excluded in safe_exclude:
+                try:
+                    keep &= values != float(excluded)
+                except (TypeError, ValueError):
+                    continue
+            if not keep.any():
+                continue
+
+            cuts = weighted_quantile(
+                values[keep], quantiles, weights=weights[keep]
+            )
+            unique_cuts = sorted({float(c) for c in cuts if np.isfinite(c)})
+            if unique_cuts:
+                self.bin_cuts_[column] = (
+                    [float("-inf")] + unique_cuts + [float("inf")]
+                )
+
     def _fit_uniform(self, X: pl.DataFrame, cols: list[str]) -> None:
         """
         Equal-width binning using vectorized min/max computation.
@@ -307,7 +355,13 @@ class WoeBinner(MarsTransformer):
             cuts = [min_val + step * j for j in range(1, self.n_bins)]
             self.bin_cuts_[c] = [float('-inf')] + cuts + [float('inf')]
 
-    def _fit_cart(self, X: pl.DataFrame, y: pl.Series, cols: list[str]) -> None:
+    def _fit_cart(
+        self,
+        X: pl.DataFrame,
+        y: pl.Series,
+        cols: list[str],
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
         """
         Decision tree based optimal binning with parallel execution.
         """
@@ -315,7 +369,7 @@ class WoeBinner(MarsTransformer):
             from joblib import Parallel, delayed
         except ImportError:
             logger.warning("joblib not installed, falling back to sequential CART")
-            self._fit_cart_sequential(X, y, cols)
+            self._fit_cart_sequential(X, y, cols, sample_weight)
             return
 
         y_np = y.to_numpy()
@@ -340,6 +394,13 @@ class WoeBinner(MarsTransformer):
 
                 x_clean = X[col].filter(pl.Series(valid_mask)).to_numpy().reshape(-1, 1)
                 y_clean = y_np[valid_mask]
+                # Cut points must describe the population. Without weights the
+                # tree splits the sample, which under undersampling is a
+                # different distribution entirely.
+                w_clean = (
+                    None if sample_weight is None
+                    else np.asarray(sample_weight, dtype=float)[valid_mask]
+                )
 
                 # Fit decision tree
                 tree = DecisionTreeClassifier(
@@ -347,7 +408,7 @@ class WoeBinner(MarsTransformer):
                     min_samples_leaf=self.min_samples_bin,
                     random_state=42
                 )
-                tree.fit(x_clean, y_clean)
+                tree.fit(x_clean, y_clean, sample_weight=w_clean)
 
                 # Extract thresholds
                 thresholds = tree.tree_.threshold
@@ -373,7 +434,13 @@ class WoeBinner(MarsTransformer):
         for col, cuts in results:
             self.bin_cuts_[col] = cuts
 
-    def _fit_cart_sequential(self, X: pl.DataFrame, y: pl.Series, cols: list[str]) -> None:
+    def _fit_cart_sequential(
+        self,
+        X: pl.DataFrame,
+        y: pl.Series,
+        cols: list[str],
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> None:
         """Sequential fallback for CART binning."""
         y_np = y.to_numpy()
         raw_exclude = self.special_values + self.missing_values
@@ -462,6 +529,14 @@ class WoeBinner(MarsTransformer):
             logger.warning("Target has only one class, WOE cannot be calculated")
             return
 
+        # Laplace smoothing adds pseudo-observations, so it has to be expressed
+        # in the same unit as the counts it is added to. Against weighted sums a
+        # fixed 0.5 is scale-dependent: rescaling every weight by a constant —
+        # which changes nothing about their relative meaning — moved IV by a
+        # factor of 1.6 in testing. Scaling by the mean weight makes it "half an
+        # average observation" again, and is exactly 0.5 when unweighted.
+        smoothing = self.smoothing * float(np.mean(weights))
+
         for col in self.fitted_features_:
             bin_col = f"{col}_bin"
             if bin_col not in X_binned.columns:
@@ -493,12 +568,8 @@ class WoeBinner(MarsTransformer):
                 bin_idx = row["bin"]
                 bad = float(row["bad"])
                 good = float(row["good"])
-                dist_bad = (bad + self.smoothing) / (
-                    total_bad + self.smoothing * 2
-                )
-                dist_good = (good + self.smoothing) / (
-                    total_good + self.smoothing * 2
-                )
+                dist_bad = (bad + smoothing) / (total_bad + smoothing * 2)
+                dist_good = (good + smoothing) / (total_good + smoothing * 2)
                 woe = float(np.log(dist_bad / dist_good))
                 iv = float((dist_bad - dist_good) * woe)
                 woe_dict[bin_idx] = woe
@@ -525,6 +596,9 @@ class WoeBinner(MarsTransformer):
         total_good = float(np.sum(weights * (1.0 - y_np)))
         if total_bad <= 0 or total_good <= 0:
             return
+
+        # Same unit as the weighted counts it is added to — see _calculate_woe.
+        smoothing = self.smoothing * float(np.mean(weights))
 
         for column in self.bin_cuts_:
             bin_col = f"{column}_bin"
@@ -577,12 +651,8 @@ class WoeBinner(MarsTransformer):
                 clipped_rate = float(np.clip(bad_rate, 1e-7, 1 - 1e-7))
                 bad = clipped_rate * count
                 good = (1.0 - clipped_rate) * count
-                dist_bad = (bad + self.smoothing) / (
-                    total_bad + self.smoothing * 2
-                )
-                dist_good = (good + self.smoothing) / (
-                    total_good + self.smoothing * 2
-                )
+                dist_bad = (bad + smoothing) / (total_bad + smoothing * 2)
+                dist_good = (good + smoothing) / (total_good + smoothing * 2)
                 woe = float(np.log(dist_bad / dist_good))
                 iv = float((dist_bad - dist_good) * woe)
                 updated[bin_idx] = woe
@@ -800,6 +870,9 @@ class WoeBinner(MarsTransformer):
         if total_bad <= 0 or total_good <= 0:
             return pl.DataFrame()
 
+        # Same unit as the weighted counts it is added to — see _calculate_woe.
+        smoothing = self.smoothing * float(np.mean(weights))
+
         all_stats = []
         for col in self.fitted_features_:
             bin_col = f"{col}_bin"
@@ -832,12 +905,12 @@ class WoeBinner(MarsTransformer):
                 .with_columns([
                     (
                         (
-                            (pl.col("bad") + self.smoothing)
-                            / (total_bad + self.smoothing * 2)
+                            (pl.col("bad") + smoothing)
+                            / (total_bad + smoothing * 2)
                         )
                         / (
-                            (pl.col("good") + self.smoothing)
-                            / (total_good + self.smoothing * 2)
+                            (pl.col("good") + smoothing)
+                            / (total_good + smoothing * 2)
                         )
                     ).log().alias("woe")
                 ])

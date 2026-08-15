@@ -1,5 +1,62 @@
 # Changelog
 
+## [3.2.0] - 2026-08-15
+
+Final batch from the adversarial audit. Six defects, five of which share one
+theme: sample weights did not mean the same thing at every stage. This matters
+precisely where credit modelling lives — undersampled goods, reject inference —
+so anything trained with weights before this release should be refitted.
+
+### Fixed
+
+- **Binning cut points ignored sample weights entirely.** Quantile, CART and the
+  sequential CART fallback all fitted their cuts on raw rows. With goods
+  undersampled 1:50, the "equal-frequency" bins held 39%/24%/18%/13%/7% of the
+  weighted population instead of 20% each, and CART split the sample rather than
+  the population. Weighted quantiles now drive the cuts, and the tree receives
+  `sample_weight` — its splits match a direct sklearn fit exactly. The unweighted
+  Polars fast path is untouched.
+
+- **WOE/IV smoothing was scale-dependent.** The fixed 0.5 Laplace constant was
+  added to weighted sums, so multiplying every weight by a constant — which
+  changes nothing about their relative meaning — moved IV by a factor of 1.6.
+  Smoothing is now expressed in mean-weight units, making IV invariant to weight
+  scale and exactly unchanged when unweighted.
+
+- **PSI bin edges came from the unweighted benchmark.** Under undersampling the
+  "deciles" held 1%-19% of the weighted population, so PSI concentrated its
+  resolution on the oversampled tail and was blind where the population actually
+  is. Edges now split the weighted benchmark; measured spread fell from 0.177
+  to 0.0006.
+
+- **`RegressionPipeline` ignored `use_sample_weight`.** It keyed weighting off
+  the presence of `weight_col` alone, so the shipped config — which carries
+  `use_sample_weight: false` next to `weight_col: weight` — trained a weighted
+  regression and an unweighted classification from the same file. On a fixture
+  where weighting flips the relationship, the coefficient went -0.17 to +4.82
+  with the flag nominally off.
+
+- **`log1p` regression with `early_stopping_eval='oot'` validated on the wrong
+  scale.** The model fits `log1p(y)` but the OOT eval set received raw targets,
+  so early stopping compared log-space predictions to raw labels: the validation
+  curve ran 14.215 → 13.921 (flat noise) instead of 0.567 → 0.270, and the tree
+  count was chosen at random. `docs/guide/regression.md` demonstrates exactly
+  this combination.
+
+- **`ScorecardBuilder.score()` returned a constant for NumPy input.** The array
+  branch labelled raw driver columns with the model's `_bin` WOE names, so the
+  binner matched nothing and every row collapsed to `offset_` — 1 distinct score
+  instead of 137, with no error raised. The array path now uses the binner's
+  fitted driver names and rejects a mismatched column count.
+
+### Added
+
+- `auto_modeling_tool.core.stats` — `weighted_quantile` / `weighted_mean`, shared
+  by binning and PSI. Uniform weights delegate to `np.quantile` so unweighted
+  behaviour is bit-for-bit unchanged.
+- `tests/test_weight_contract.py` — 12 tests pinning each of the above, including
+  a direct comparison of CART cuts against sklearn with weights applied.
+
 ## [3.1.3] - 2026-08-15
 
 Second batch from the adversarial audit. The PSI defect made drift monitoring
