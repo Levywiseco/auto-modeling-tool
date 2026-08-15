@@ -289,7 +289,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-size", type=float, help="Random fallback OOT proportion")
     parser.add_argument("--n-bins", type=int)
     parser.add_argument("--method", choices=["quantile", "uniform", "cart"])
-    parser.add_argument("--selection", choices=["iv", "correlation", "rfe", "variance"])
+    parser.add_argument(
+        "--selection",
+        choices=["iv", "correlation", "variance", "rfe", "recursive", "mutual_info"],
+    )
     parser.add_argument("--n-features", type=int)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--sample-column", help="Column containing Dev/OOT labels")
@@ -299,7 +302,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--oot-label")
     parser.add_argument(
         "--clean-strategy",
-        choices=["mean", "median", "zero", "forward", "backward"],
+        choices=["mean", "median", "zero"],
     )
     parser.add_argument("--normalize-method", choices=["minmax", "zscore", "robust"])
     parser.add_argument("--min-samples-bin", type=int)

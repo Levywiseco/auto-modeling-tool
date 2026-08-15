@@ -42,8 +42,28 @@ def load_pipeline_config(path: Union[str, Path]) -> dict[str, Any]:
     return config
 
 
+# Keys that only ever appear in an archived run's flat config snapshot.
+_FLAT_SCHEMA_MARKERS = ("data_path", "target_col")
+
+
+def _is_flat_snapshot(config: dict[str, Any]) -> bool:
+    """True for a run archive's config.yaml (flat pipeline kwargs)."""
+    return all(key in config for key in _FLAT_SCHEMA_MARKERS)
+
+
 def config_to_pipeline_kwargs(config: dict[str, Any]) -> dict[str, Any]:
-    """Map the canonical schema and supported legacy aliases to CLI kwargs."""
+    """Map the canonical schema and supported legacy aliases to CLI kwargs.
+
+    Also accepts the flat snapshot written into ``runs/<id>/config.yaml``, so an
+    archived run can be replayed with ``--config runs/<id>/config.yaml``
+    directly rather than being hand-translated back into the nested schema.
+    """
+    if _is_flat_snapshot(config):
+        # A replay is a run like any other: it archives under a fresh run id,
+        # leaving the archive it was read from untouched. Pass
+        # --no-archive-run to check reproducibility without recording it.
+        return {k: v for k, v in config.items() if not k.startswith("_")}
+
     config_path = (
         Path(config["_config_path"])
         if config.get("_config_path")

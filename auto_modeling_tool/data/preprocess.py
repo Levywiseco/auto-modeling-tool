@@ -11,6 +11,7 @@ import polars as pl
 
 from ..core.base import MarsTransformer
 from ..core.decorators import time_it
+from ..core.exceptions import ValidationError
 from ..core.logger import logger
 
 # =============================================================================
@@ -378,8 +379,20 @@ class DataPreprocessor(MarsTransformer):
                 fill_val = stats.get("mean", 0)
             elif self.clean_strategy == "median":
                 fill_val = stats.get("median", 0)
-            else:
+            elif self.clean_strategy == "zero":
                 fill_val = 0
+            else:
+                # Silently imputing 0 for an unrecognised strategy is dangerous
+                # on a risk driver: 0 income is worst-case, 0 DPD is best-case.
+                # Order-dependent strategies cannot work here at all — this
+                # preprocessor is fitted once and applied row-wise at scoring
+                # time, where there is no previous row to carry forward.
+                raise ValidationError(
+                    f"DataPreprocessor does not support clean_strategy "
+                    f"{self.clean_strategy!r}. Use 'mean', 'median' or 'zero'; "
+                    f"order-dependent fills such as 'forward'/'backward' are "
+                    f"not reproducible at scoring time."
+                )
 
             fill_expr = pl.col(col)
             if X[col].dtype in [pl.Float32, pl.Float64]:

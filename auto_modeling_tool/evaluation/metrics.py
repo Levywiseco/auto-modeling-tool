@@ -243,14 +243,25 @@ def calculate_psi(
     if expected_total <= 0 or actual_total <= 0:
         raise ValueError("PSI populations must contain positive total weight")
 
+    # Bin edges must ignore missing values. A single NaN propagates through
+    # np.quantile, making every edge NaN, every membership test False, and the
+    # resulting PSI exactly 0.0 — reporting "Stable" for any amount of drift.
+    # Credit features are almost always partly null, so this has to be explicit.
+    finite_expected = expected_values[np.isfinite(expected_values)]
+    finite_actual = actual_values[np.isfinite(actual_values)]
+    if finite_expected.size == 0 or finite_actual.size == 0:
+        raise ValueError(
+            "PSI requires at least one finite value in each population"
+        )
+
     if bin_type == "quantile":
         quantiles = np.linspace(0, 1, n_bins + 1)
-        bin_edges = [float(np.quantile(expected_values, q)) for q in quantiles]
+        bin_edges = [float(np.quantile(finite_expected, q)) for q in quantiles]
         bin_edges[0] = float("-inf")
         bin_edges[-1] = float("inf")
     else:
-        min_val = min(expected_values.min(), actual_values.min())
-        max_val = max(expected_values.max(), actual_values.max())
+        min_val = min(finite_expected.min(), finite_actual.min())
+        max_val = max(finite_expected.max(), finite_actual.max())
         bin_edges = np.linspace(min_val, max_val, n_bins + 1).tolist()
         bin_edges[0] = float("-inf")
         bin_edges[-1] = float("inf")

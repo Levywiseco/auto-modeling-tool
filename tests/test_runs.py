@@ -393,3 +393,106 @@ class TestPipelineIntegration:
         assert result["run_path"] is None
         assert result["metrics"]["auc_roc"] > 0
         assert (tmp_path / "output" / "scoring_artifact.pkl").exists()
+
+
+class TestArchiveFidelity:
+    """An archive must describe its own run, and must be replayable."""
+
+    def _frame(self):
+        import numpy as np
+        import polars as pl
+
+        rng = np.random.default_rng(2)
+        n = 400
+        x1 = rng.normal(size=n)
+        return pl.DataFrame({
+            "x1": x1,
+            "x2": rng.normal(size=n),
+            "target": (x1 > 0).astype(int),
+            "sample": ["dev"] * 300 + ["oot"] * 100,
+        })
+
+    def test_archive_holds_only_its_own_report(self, tmp_path):
+        """Reports accumulate in a shared output dir; each archive takes one."""
+        from auto_modeling_tool.main import run_modeling_pipeline
+
+        csv = tmp_path / "d.csv"
+        self._frame().write_csv(csv)
+        for _ in range(3):
+            run_modeling_pipeline(
+                str(csv), "target",
+                output_dir=str(tmp_path / "output"),
+                runs_dir=str(tmp_path / "runs"),
+                sample_col="sample", n_bins=4, min_samples_bin=10,
+            )
+
+        archived = list_runs(tmp_path / "runs")
+        assert len(archived) == 3
+        for record in archived:
+            reports = list(record.path.glob("Model_Report_*.xlsx"))
+            assert len(reports) == 1, f"{record.run_id} archived {len(reports)} reports"
+
+    def test_archived_config_replays_through_the_cli_entry_point(self, tmp_path):
+        """The archive's headline promise: --config runs/<id>/config.yaml works."""
+        from auto_modeling_tool.main import run_configured_pipeline, run_modeling_pipeline
+
+        csv = tmp_path / "d.csv"
+        self._frame().write_csv(csv)
+        original = run_modeling_pipeline(
+            str(csv), "target",
+            output_dir=str(tmp_path / "output"),
+            runs_dir=str(tmp_path / "runs"),
+            sample_col="sample", n_bins=4, min_samples_bin=10,
+        )
+
+        archived_config = original["run_path"] / "config.yaml"
+        assert archived_config.exists()
+
+        replay = run_configured_pipeline(
+            str(archived_config),
+            {"output_dir": str(tmp_path / "replay")},
+        )
+        assert replay["metrics"]["auc_roc"] == pytest.approx(
+            original["metrics"]["auc_roc"]
+        )
+        assert replay["selected_features"] == original["selected_features"]
+
+    def test_replay_records_a_new_run_without_touching_the_original(self, tmp_path):
+        """A replay is a run in its own right; the source archive is untouched."""
+        from auto_modeling_tool.main import run_configured_pipeline, run_modeling_pipeline
+
+        csv = tmp_path / "d.csv"
+        self._frame().write_csv(csv)
+        original = run_modeling_pipeline(
+            str(csv), "target",
+            output_dir=str(tmp_path / "output"),
+            runs_dir=str(tmp_path / "runs"),
+            sample_col="sample", n_bins=4, min_samples_bin=10,
+        )
+        before = load_run(original["run_path"]).metrics["auc_roc"]
+
+        replay = run_configured_pipeline(
+            str(original["run_path"] / "config.yaml"),
+            {"output_dir": str(tmp_path / "replay")},
+        )
+
+        assert len(list_runs(tmp_path / "runs")) == 2
+        assert replay["run_path"] != original["run_path"]
+        assert load_run(original["run_path"]).metrics["auc_roc"] == before
+
+    def test_replay_can_skip_archiving(self, tmp_path):
+        from auto_modeling_tool.main import run_configured_pipeline, run_modeling_pipeline
+
+        csv = tmp_path / "d.csv"
+        self._frame().write_csv(csv)
+        original = run_modeling_pipeline(
+            str(csv), "target",
+            output_dir=str(tmp_path / "output"),
+            runs_dir=str(tmp_path / "runs"),
+            sample_col="sample", n_bins=4, min_samples_bin=10,
+        )
+        run_configured_pipeline(
+            str(original["run_path"] / "config.yaml"),
+            {"output_dir": str(tmp_path / "replay"), "archive_run": False},
+        )
+        assert len(list_runs(tmp_path / "runs")) == 1
