@@ -109,12 +109,15 @@ print(generate_monitoring_alert(report, score_col="model_score",
 from auto_modeling_tool.binning import WoeBinner
 from auto_modeling_tool.features import FeatureSelector
 
+features = df.drop("target")
+target = df["target"]
+
 binner = WoeBinner(n_bins=10, method="quantile", special_values=[-999])
-df_woe = binner.fit_transform(df, target_col="target")
+df_woe = binner.fit_transform(features, target, return_type="woe")
 iv_report = binner.get_iv_report()
 
 selector = FeatureSelector(method="iv", iv_threshold=0.02)
-df_selected = selector.fit_transform(df_woe, target_col="target")
+df_selected = selector.fit_transform(df_woe, target)
 ```
 
 ---

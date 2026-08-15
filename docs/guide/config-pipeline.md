@@ -31,7 +31,7 @@ output:
   dir: output
 
 preprocess:
-  clean_strategy: median        # 缺失填充策略
+  clean_strategy: median        # mean | median | zero
   normalize_method: zscore      # minmax | zscore | robust
 
 binning:
@@ -42,7 +42,7 @@ binning:
   monotonic: false              # 数值变量单调校准
 
 feature_screening:
-  method: iv                    # iv | correlation | rfe | variance
+  method: iv                    # iv | correlation | variance | rfe | mutual_info
   n_features: 20
 
 modeling:

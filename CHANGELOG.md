@@ -1,5 +1,52 @@
 # Changelog
 
+## [3.1.3] - 2026-08-15
+
+Second batch from the adversarial audit. The PSI defect made drift monitoring
+report "Stable" for essentially every real feature.
+
+### Fixed
+
+- **PSI returned exactly 0.0 whenever the benchmark contained a null.** Quantile
+  edges came from `np.quantile` over the raw array, so one NaN made every edge
+  NaN, every bin membership test False, and both populations collapse to the
+  same epsilon share. A benchmark/actual pair with PSI 10.39 reported 0.0 after
+  a single value was set to NaN. Credit features are almost always partly null,
+  so `calculate_feature_psi` reported "Stable" for nearly everything, and the
+  release gate's `--max-psi` was reading that number. Edges are now computed
+  over finite values only; an all-missing population raises instead.
+
+- **`clean_strategy` silently imputed 0 for anything but mean/median.** The CLI
+  offered `forward` and `backward`; the stateful preprocessor implemented
+  neither and fell through to a literal 0 — worst-case for income, best-case for
+  DPD, applied identically in training and in the saved artifact. Order-dependent
+  fills cannot work in a fitted transform that scores row-wise, so they are now
+  rejected with an explanatory error and removed from the CLI choices. `zero` is
+  explicit rather than a fallthrough.
+
+- **`--selection rfe` crashed.** The CLI and both guides advertised `rfe`; the
+  implementation only accepted `recursive`. `rfe` is now an accepted spelling,
+  and the CLI additionally exposes `recursive` and `mutual_info`, which worked
+  but were unreachable.
+
+- **Run archives contained other runs' reports.** `archive_run` copied every
+  `Model_Report_*.xlsx` in the output directory, so the third run's archive held
+  reports 1, 2 and 3 and grew without bound. Only the report the run just wrote
+  is archived.
+
+- **An archived run could not be replayed through `--config`.** The snapshot is
+  flat pipeline kwargs; the loader only understood the nested schema, so
+  `--config runs/<id>/config.yaml` failed with "Config must define data.path" —
+  contradicting the feature's documented promise. The loader now accepts the
+  archived form, and replaying reproduces the original metrics exactly.
+
+- **Documented examples raised.** README and the feature-selection guide both
+  showed `fit_transform(df, target_col=...)`, which is not the signature, and the
+  guide imported `remove_multicollinearity` from a path that never exported it
+  while describing its return value as a feature list rather than
+  `(DataFrame, dropped)`. All examples are now executed by
+  `tests/test_documented_api.py`.
+
 ## [3.1.2] - 2026-08-15
 
 Two defects found by an adversarial audit, both of which inflated reported model

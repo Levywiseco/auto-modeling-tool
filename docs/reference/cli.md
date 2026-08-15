@@ -41,7 +41,7 @@
 
 | 参数 | 可选值 |
 |------|--------|
-| `--clean-strategy` | 缺失填充策略，默认 `median` |
+| `--clean-strategy` | `mean` \| `median` \| `zero`，默认 `median` |
 | `--normalize-method` | `minmax` \| `zscore` \| `robust` |
 | `--n-bins` | 分箱数 |
 | `--method` | `quantile` \| `uniform` \| `cart` |
@@ -53,7 +53,7 @@
 
 | 参数 | 说明 |
 |------|------|
-| `--selection` | `iv` \| `correlation` \| `rfe` \| `variance` |
+| `--selection` | `iv` \| `correlation` \| `variance` \| `rfe`（= `recursive`）\| `mutual_info` |
 | `--n-features` | 保留特征数 |
 | `--use-sample-weight` | 开启样本权重 |
 | `--weight-column` | 权重列名 |

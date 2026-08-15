@@ -234,3 +234,47 @@ class TestKSTieHandling:
 
         ks, _ = calculate_ks(y, score, sample_weight=weights)
         assert ks == pytest.approx(self._reference_ks(y, score, weights), abs=1e-9)
+
+
+class TestPSIWithMissingValues:
+    """Credit features are almost always partly null.
+
+    A single NaN in the benchmark used to make every quantile edge NaN, every
+    bin membership test False, and PSI exactly 0.0 — reporting "Stable" for
+    unlimited drift, through the public feature-drift API and the release gate.
+    """
+
+    @staticmethod
+    def _drifted():
+        rng = np.random.default_rng(1)
+        return rng.normal(0, 1, 4000), rng.normal(3, 1, 4000)
+
+    def test_one_nan_does_not_collapse_psi(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_psi
+
+        expected, actual = self._drifted()
+        clean = calculate_psi(expected, actual)[0]
+        assert clean > 1.0, "fixture must exhibit real drift"
+
+        with_nan = expected.copy()
+        with_nan[0] = np.nan
+        assert calculate_psi(with_nan, actual)[0] == pytest.approx(clean, rel=0.02)
+
+    @pytest.mark.parametrize("missing_rate", [0.05, 0.3])
+    def test_psi_degrades_gracefully_with_missingness(self, missing_rate):
+        from auto_modeling_tool.evaluation.metrics import calculate_psi
+
+        rng = np.random.default_rng(2)
+        expected, actual = self._drifted()
+        holes = expected.copy()
+        holes[rng.choice(len(holes), int(len(holes) * missing_rate), replace=False)] = np.nan
+
+        psi = calculate_psi(holes, actual)[0]
+        assert psi > 1.0, "drift must still be detected"
+
+    def test_all_missing_benchmark_raises(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_psi
+
+        _, actual = self._drifted()
+        with pytest.raises(ValueError, match="finite value"):
+            calculate_psi(np.full(100, np.nan), actual)

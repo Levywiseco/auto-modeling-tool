@@ -209,3 +209,51 @@ class TestDataSplit:
         assert isinstance(X_test, pl.DataFrame)
         assert isinstance(y_train, pl.Series)
         assert isinstance(y_test, pl.Series)
+
+
+class TestCleanStrategyContract:
+    """Unsupported strategies must fail loudly, not impute zero.
+
+    The stateful preprocessor only ever implemented mean/median; everything
+    else fell through to a literal 0. On a risk driver that is dangerous —
+    zero income is worst-case, zero DPD is best-case — and it applied
+    identically in training and in the saved scoring artifact.
+    """
+
+    @staticmethod
+    def _frame():
+        import polars as pl
+
+        return pl.DataFrame({"income": [10000.0, 20000.0, None, 30000.0, None]})
+
+    def test_supported_strategies_impute_as_documented(self):
+        from auto_modeling_tool.data.preprocess import DataPreprocessor
+
+        expected = {
+            "median": 20000.0,
+            "mean": 20000.0,
+            "zero": 0.0,
+        }
+        for strategy, filled in expected.items():
+            pre = DataPreprocessor(clean_strategy=strategy, normalize_method=None)
+            pre.fit(self._frame())
+            assert pre.transform(self._frame())["income"].to_list()[2] == filled
+
+    def test_order_dependent_strategies_are_rejected(self):
+        from auto_modeling_tool.core.exceptions import ValidationError
+        from auto_modeling_tool.data.preprocess import DataPreprocessor
+
+        for strategy in ("forward", "backward"):
+            pre = DataPreprocessor(clean_strategy=strategy, normalize_method=None)
+            pre.fit(self._frame())
+            with pytest.raises(ValidationError, match="does not support"):
+                pre.transform(self._frame())
+
+    def test_cli_only_offers_supported_strategies(self):
+        from auto_modeling_tool.main import _parser
+
+        action = next(
+            a for a in _parser()._actions
+            if "--clean-strategy" in (a.option_strings or [])
+        )
+        assert set(action.choices) == {"mean", "median", "zero"}

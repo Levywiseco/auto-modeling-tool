@@ -8,7 +8,7 @@
 from auto_modeling_tool.features import FeatureSelector
 
 selector = FeatureSelector(method="iv", iv_threshold=0.02)
-df_selected = selector.fit_transform(df_woe, target_col="target")
+df_selected = selector.fit_transform(df_woe, target)   # target 是 pl.Series
 selector.get_selected_features()
 ```
 
@@ -19,7 +19,7 @@ selector.get_selected_features()
 | `iv` | 按信息值阈值筛选 | 风控标配，先跑这个 |
 | `correlation` | 剔除高相关特征对中 IV 较低者 | 去共线性 |
 | `variance` | 剔除低方差特征 | 快速粗筛 |
-| `rfe` | 递归特征消除 | 配合具体模型精筛 |
+| `rfe`（等价写法 `recursive`） | 递归特征消除 | 配合具体模型精筛 |
 | `mutual_info` | 互信息 | 捕捉非线性关系 |
 
 ## 推荐流程
@@ -33,7 +33,9 @@ stable = profile.summary_table.filter(
 
 # 2. 在稳定特征里去共线性
 from auto_modeling_tool.features import remove_multicollinearity
-final_feats = remove_multicollinearity(df.select(stable), threshold=0.8)
+
+# 返回 (过滤后的 DataFrame, 被剔除的列名)
+df_final, dropped = remove_multicollinearity(df.select(stable), threshold=0.8)
 ```
 
 先稳定性后区分度：一个 IV 高但按月漂移的特征，上线三个月就会反噬。

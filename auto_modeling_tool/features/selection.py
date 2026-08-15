@@ -28,7 +28,7 @@ def select_features(
     X: Union[pl.DataFrame, pl.LazyFrame],
     y: Union[pl.Series, np.ndarray],
     *,
-    method: Literal["recursive", "correlation", "variance", "iv", "mutual_info"] = "recursive",
+    method: Literal["recursive", "rfe", "correlation", "variance", "iv", "mutual_info"] = "recursive",
     n_features: Optional[int] = None,
     threshold: float = 0.01,
     correlation_threshold: float = 0.95,
@@ -79,6 +79,12 @@ def select_features(
 
     logger.info(f"🔍 Selecting features using '{method}' method")
     logger.info(f"   Input: {len(X.columns)} features, {len(X)} samples")
+
+    # "rfe" is the name the CLI and the docs have always advertised; the
+    # implementation calls it "recursive". Accept both rather than crash on the
+    # documented spelling.
+    if method == "rfe":
+        method = "recursive"
 
     if method == "recursive":
         selected = _select_rfe(X, y, n_features or 10)
@@ -307,7 +313,7 @@ class FeatureSelector(MarsTransformer):
 
     def __init__(
         self,
-        method: Literal["recursive", "correlation", "variance", "iv", "mutual_info"] = "correlation",
+        method: Literal["recursive", "rfe", "correlation", "variance", "iv", "mutual_info"] = "correlation",
         n_features: Optional[int] = None,
         correlation_threshold: float = 0.95,
         variance_threshold: float = 0.01,

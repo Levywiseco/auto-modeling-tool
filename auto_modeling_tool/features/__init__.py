@@ -15,10 +15,12 @@ from .importance import (
 )
 from .selection import (
     FeatureSelector,
+    remove_multicollinearity,
     select_features,
 )
 
 __all__ = [
+    "remove_multicollinearity",
     # Selection
     "select_features",
     "FeatureSelector",

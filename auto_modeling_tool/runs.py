@@ -165,9 +165,16 @@ def archive_run(
         candidate = source / name
         if candidate.exists():
             shutil.copy2(candidate, destination / name)
+
+    # The pipeline writes an incrementing Model_Report_N.xlsx into a shared
+    # output directory, so copying the whole glob would drag every earlier
+    # run's report into this archive and grow without bound. Only the report
+    # this run just wrote — the most recently modified — belongs here.
     for pattern in ARCHIVED_GLOBS:
-        for candidate in sorted(source.glob(pattern)):
-            shutil.copy2(candidate, destination / candidate.name)
+        reports = sorted(source.glob(pattern), key=lambda p: p.stat().st_mtime)
+        if reports:
+            newest = reports[-1]
+            shutil.copy2(newest, destination / newest.name)
 
     if config:
         _write_config_snapshot(destination / RUN_CONFIG, config)
