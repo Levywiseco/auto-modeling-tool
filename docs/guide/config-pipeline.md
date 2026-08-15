@@ -29,6 +29,11 @@ data:
 
 output:
   dir: output
+  runs_dir: runs                # 运行归档目录
+  archive_run: true             # 设 false 关闭归档
+
+variables:
+  exclude_columns: []           # 不入模的列，如 [user_id, apply_date]
 
 preprocess:
   clean_strategy: median        # mean | median | zero | keep（保留缺失给 WOE）
@@ -85,7 +90,7 @@ scoring:
 
 ## CLI 覆盖
 
-每个配置项都能用命令行临时盖掉，适合做对比实验而不改文件：
+几乎每个配置项都能用命令行临时盖掉，适合做对比实验而不改文件（`modeling.model_params` 与 `evaluation.export_excel` 只能在 YAML 里设）：
 
 ```bash
 python -m auto_modeling_tool.main --config configs/pipeline_config.yaml \
@@ -121,7 +126,8 @@ python -m auto_modeling_tool.main --input data.csv --target target --output outp
 output/
 ├── scoring_artifact.pkl     # 独立打分用，含全部拟合好的变换
 ├── pipeline.pkl             # 完整流水线对象
-└── Model_Report_1.xlsx      # 多页审计报告
+├── Model_Report_1.xlsx      # 多页审计报告
+└── model_report/            # 模型、指标 JSON、特征重要性 CSV
 ```
 
 - `scoring_artifact.pkl` → [独立打分与 Artifact](scoring-artifact.md)

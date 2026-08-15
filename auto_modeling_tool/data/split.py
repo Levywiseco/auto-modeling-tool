@@ -367,9 +367,27 @@ def split_dev_oot(
                     f"{dev_label!r} and {oot_label!r}; found {sorted(available, key=str)!r}"
                 )
 
+        dev_rows = data.filter(pl.col(sample_column) == dev_label)
+        oot_rows = data.filter(pl.col(sample_column) == oot_label)
+
+        # Rows carrying neither label are silently excluded from modelling.
+        # That is usually intentional (a holdout slice), but it must be said
+        # out loud: dropping a quarter of the data without a word is how a
+        # model ends up trained on a population nobody meant to select.
+        dropped = len(data) - len(dev_rows) - len(oot_rows)
+        if dropped:
+            other = sorted(
+                available - {dev_label, oot_label}, key=str
+            )
+            logger.warning(
+                f"Dev/OOT split ignored {dropped} of {len(data)} rows whose "
+                f"'{sample_column}' is neither {dev_label!r} nor {oot_label!r} "
+                f"(found {other!r}); they take no part in training or evaluation"
+            )
+
         result = DatasetSplit(
-            dev=data.filter(pl.col(sample_column) == dev_label),
-            oot=data.filter(pl.col(sample_column) == oot_label),
+            dev=dev_rows,
+            oot=oot_rows,
             strategy="sample_column",
             sample_column=sample_column,
         )

@@ -70,6 +70,13 @@
 | `--base-score` / `--pdo` | 基准分与翻倍分数，默认 500 / 50 |
 | `--min-score` / `--max-score` | 信用分上下限，默认 300 / 900 |
 
+### 运行归档
+
+| 参数 | 说明 |
+|------|------|
+| `--runs-dir` | 归档目录，默认 `runs`，见[运行历史](../guide/run-history.md) |
+| `--no-archive-run` | 本次不归档，只写 `output/` |
+
 ---
 
 ## `scripts/score_new_samples.py`

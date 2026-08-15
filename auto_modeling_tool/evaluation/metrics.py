@@ -184,17 +184,31 @@ def calculate_lift(
     y_values = _to_numpy(y_true)
     score_values = _to_numpy(y_score)
     weights = _validated_weights(sample_weight, len(y_values))
-    df = pl.DataFrame({
+    frame = pl.DataFrame({
         "target": y_values,
         "score": score_values,
         "weight": weights,
-    }).with_columns(
-        pl.col("score").qcut(
-            n_bins,
-            labels=[str(i) for i in range(n_bins)],
-            allow_duplicates=True,
-        ).alias("bin")
-    )
+    })
+    if np.allclose(weights, weights[0]) if len(weights) else True:
+        # Unweighted: keep Polars' qcut exactly as before.
+        df = frame.with_columns(
+            pl.col("score").qcut(
+                n_bins,
+                labels=[str(i) for i in range(n_bins)],
+                allow_duplicates=True,
+            ).alias("bin")
+        )
+    else:
+        # Deciles of the weighted population. qcut counts rows, so under
+        # undersampling the "deciles" of a lift table held 0.6% and 19% of the
+        # population — and the lift table is the one risk teams read.
+        edges = weighted_quantile(
+            score_values, np.linspace(0, 1, n_bins + 1)[1:-1], weights=weights
+        )
+        bin_index = np.searchsorted(np.asarray(edges), score_values, side="right")
+        df = frame.with_columns(
+            pl.Series("bin", [str(int(b)) for b in bin_index])
+        )
     overall_bad_rate = float(
         np.average(y_values, weights=weights)
     ) if len(y_values) else 0.0

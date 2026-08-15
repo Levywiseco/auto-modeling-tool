@@ -15,6 +15,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from auto_modeling_tool.binning import WoeBinner
 from auto_modeling_tool.evaluation.metrics import calculate_psi
+from auto_modeling_tool.modeling.scorecard import probability_to_credit_score
 
 
 class TestSmoothingIsScaleInvariant:
@@ -300,3 +301,158 @@ class TestMissingnessSurvivesToWOE:
         imputed, _ = self._binner_for(tmp_path, "median")
         kept, _ = self._binner_for(tmp_path, "keep")
         assert kept.total_iv_["x"] > imputed.total_iv_["x"]
+
+
+class TestPreprocessorAndLiftUseWeights:
+    """The last two stages that computed statistics on the raw sample."""
+
+    def test_preprocessor_statistics_describe_the_population(self):
+        from auto_modeling_tool.data.preprocess import DataPreprocessor
+
+        values = np.concatenate([np.full(100, 1.0), np.full(100, 100.0)])
+        weights = np.concatenate([np.full(100, 1.0), np.full(100, 50.0)])
+        frame = pl.DataFrame({"x": values})
+
+        plain = DataPreprocessor(clean_strategy="median", normalize_method=None)
+        plain.fit(frame)
+        weighted = DataPreprocessor(clean_strategy="median", normalize_method=None)
+        weighted.fit(frame, sample_weight=weights)
+
+        # The population is dominated by the 100.0 group.
+        assert plain.stats_["x"]["median"] < 60
+        assert weighted.stats_["x"]["median"] == pytest.approx(100.0)
+
+    def test_lift_deciles_are_weighted(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_lift
+
+        rng = np.random.default_rng(5)
+        n = 3000
+        score = rng.random(n)
+        target = rng.binomial(1, score * 0.6)
+        weights = np.where(score > 0.5, 1.0, 30.0)
+
+        table = calculate_lift(
+            pl.Series("y", target), score, sample_weight=weights
+        )
+        counts = [row["count"] for row in table.to_dicts()]
+        shares = [c / sum(counts) for c in counts]
+        assert max(shares) - min(shares) < 0.02, shares
+
+    def test_unweighted_lift_is_unchanged(self):
+        from auto_modeling_tool.evaluation.metrics import calculate_lift
+
+        rng = np.random.default_rng(5)
+        score = rng.random(2000)
+        target = rng.binomial(1, score * 0.6)
+        table = calculate_lift(pl.Series("y", target), score)
+        assert table.height == 10
+
+
+class TestScorecardScaleDirection:
+    """A credit score must fall as risk rises — both scales, same direction."""
+
+    @staticmethod
+    def _card():
+        from sklearn.linear_model import LogisticRegression
+
+        from auto_modeling_tool.modeling.scorecard import ScorecardBuilder
+
+        rng = np.random.default_rng(4)
+        n = 1500
+        frame = pl.DataFrame({f"f{i}": rng.normal(size=n) for i in range(3)})
+        target = pl.Series("t", (frame["f0"].to_numpy() > 0).astype(int))
+        binner = WoeBinner(n_bins=4, min_samples_bin=20)
+        woe = binner.fit_transform(frame, target, return_type="woe")
+        columns = [c for c in woe.columns if c.endswith("_bin")]
+        model = LogisticRegression(max_iter=500).fit(
+            woe.select(columns).to_numpy(), target.to_numpy()
+        )
+        card = ScorecardBuilder(
+            base_score=600, PDO=20, target_odds=20, round_scores=False
+        ).fit(model, binner, feature_names=columns)
+        return card, frame, model, woe.select(columns).to_numpy()
+
+    def test_score_falls_as_bad_probability_rises(self):
+        """It ran backwards: a 'high score = low risk' cutoff approved the worst."""
+        card, frame, model, woe = self._card()
+        scores = card.score(frame)
+        bad_probability = model.predict_proba(woe)[:, 1]
+        assert np.corrcoef(scores, bad_probability)[0, 1] < -0.5
+
+    def test_both_credit_scales_agree_in_direction(self):
+        card, frame, model, woe = self._card()
+        helper = probability_to_credit_score(
+            np.array([0.1, 0.9]), base_score=600, pdo=20,
+            min_score=0, max_score=1000,
+        )
+        assert helper[0] > helper[1]
+
+        scores = card.score(frame)
+        bad_probability = model.predict_proba(woe)[:, 1]
+        worst = scores[np.argmax(bad_probability)]
+        best = scores[np.argmin(bad_probability)]
+        assert best > worst
+
+    def test_predict_proba_matches_the_underlying_model(self):
+        """The intercept was recorded and then never applied."""
+        card, frame, model, woe = self._card()
+        assert np.allclose(
+            card.predict_proba(frame)[:, 1],
+            model.predict_proba(woe)[:, 1],
+            atol=1e-9,
+        )
+
+
+class TestSplitReportsDroppedRows:
+    def test_rows_outside_dev_and_oot_are_reported(self, monkeypatch):
+        """Silently dropping a quarter of the data is how models go wrong.
+
+        The project uses its own logger, which does not propagate to caplog,
+        so the warning is captured at the source.
+        """
+        from auto_modeling_tool.data import split as split_module
+
+        warnings = []
+        monkeypatch.setattr(
+            split_module.logger, "warning", lambda msg, *a, **k: warnings.append(str(msg))
+        )
+
+        frame = pl.DataFrame({
+            "f": range(10),
+            "target": [0, 1] * 5,
+            "sample": ["dev"] * 4 + ["oot"] * 3 + ["holdout", "?", "dev"],
+        })
+        result = split_module.split_dev_oot(frame, "target", sample_column="sample")
+
+        assert len(result.dev) + len(result.oot) == 8
+        assert any("ignored 2" in w for w in warnings), warnings
+
+    def test_no_warning_when_nothing_is_dropped(self, monkeypatch):
+        from auto_modeling_tool.data import split as split_module
+
+        warnings = []
+        monkeypatch.setattr(
+            split_module.logger, "warning", lambda msg, *a, **k: warnings.append(str(msg))
+        )
+        frame = pl.DataFrame({
+            "f": range(8),
+            "target": [0, 1] * 4,
+            "sample": ["dev"] * 5 + ["oot"] * 3,
+        })
+        split_module.split_dev_oot(frame, "target", sample_column="sample")
+        assert not any("ignored" in w for w in warnings), warnings
+
+
+class TestCustomNullValuesAreConsistent:
+    def test_fit_excludes_the_sentinel_it_will_later_replace(self):
+        """Averaging -999 into the median it fills with skews every imputation."""
+        from auto_modeling_tool.data.preprocess import DataPreprocessor
+
+        frame = pl.DataFrame({"x": [1.0, 2.0, -999.0, 4.0, -999.0]})
+        pre = DataPreprocessor(
+            clean_strategy="median", normalize_method=None,
+            custom_null_values=[-999],
+        )
+        pre.fit(frame)
+        assert pre.stats_["x"]["median"] == pytest.approx(2.0)
+        assert pre.transform(frame)["x"].to_list() == [1.0, 2.0, 2.0, 4.0, 2.0]

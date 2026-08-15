@@ -42,7 +42,7 @@
 | 🔍 **数据质量检查**<br>建模前看清缺失、特殊值、常量列 | `profile_data(df, ...)` | `DataProfileReport` |
 | 🎯 **特征风险评估**<br>一次调用完成分箱 + IV/KS + 跨期 PSI | `profile_risk(df, target=...)` | `RiskProfile` |
 | 🧪 **候选特征筛选**<br>IV / RFE / 相关性 / 互信息多方法筛选 | `FeatureSelector` | 筛选后特征列表 |
-| 🤖 **模型训练**<br>LR / XGBoost / 决策树 + 调参 + 校准 | `auto_modeling_tool.modeling` | 模型 + 指标 |
+| 🤖 **模型训练**<br>LR / XGBoost / LightGBM / CatBoost / 决策树 / 随机森林 | `auto_modeling_tool.modeling` | 模型 + 指标 |
 | 📡 **特征 / 模型监控**<br>PSI 漂移 + 缺失率 + 分均值 + 中文告警 | `Monitor().monitor(df, ...)` | `MonitoringReport` |
 | 📋 **报告与评分卡交付** | `report.to_markdown()` / `Scorecard` | Markdown / 评分表 |
 

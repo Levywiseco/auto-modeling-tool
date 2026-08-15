@@ -50,6 +50,7 @@ class ScorecardBuilder:
         self.binner_: Any = None
         self.feature_names_: list[str] = []
         self.intercept_: float = 0.0
+        self.base_points_: float = 0.0
         self.coefficients_: np.ndarray = None
         self.scorecard_: pl.DataFrame = None
 
@@ -105,9 +106,16 @@ class ScorecardBuilder:
                 f"coefficients ({len(self.coefficients_)})"
             )
 
-        # Calculate scaling factors
+        # Standard scorecard scaling. WOE is ln(bad/good), so a larger
+        # sum(coef * WOE) means a worse applicant; the points contribution is
+        # therefore NEGATED, otherwise the scale runs backwards and a
+        # "high score = low risk" cutoff approves the worst applicants.
         self.factor_ = self.PDO / np.log(2)
         self.offset_ = self.base_score - self.factor_ * np.log(self.target_odds)
+        # The model intercept is a constant shift of the log-odds, so it belongs
+        # in the base points. It was recorded and then never used, which made
+        # predict_proba disagree with the underlying model.
+        self.base_points_ = self.offset_ - self.factor_ * float(self.intercept_)
 
         # Build scorecard
         self._build_scorecard()
@@ -138,7 +146,7 @@ class ScorecardBuilder:
             bin_labels = getattr(self.binner_, "bin_mappings_", {}).get(raw_feature, {})
 
             for bin_idx, woe in sorted(woe_values.items(), key=lambda item: item[0]):
-                points = coef * float(woe) * self.factor_
+                points = -coef * float(woe) * self.factor_
                 bin_label = bin_labels.get(bin_idx)
                 if bin_label is None:
                     if bin_edges and isinstance(bin_idx, int) and 0 <= bin_idx < len(bin_edges) - 1:
@@ -198,7 +206,7 @@ class ScorecardBuilder:
                 )
             X = pl.DataFrame(X, schema=raw_features)
         X_bins = self.binner_.transform(X, return_type="index")
-        scores = np.full(len(X), self.offset_, dtype=float)
+        scores = np.full(len(X), self.base_points_, dtype=float)
 
         for model_feature, coef in zip(self.feature_names_, self.coefficients_):
             raw_feature = (
@@ -214,7 +222,7 @@ class ScorecardBuilder:
             feature_points = np.zeros(len(X), dtype=float)
             for bin_idx, woe in woe_by_bin.items():
                 feature_points[bin_indices == bin_idx] = (
-                    float(coef) * float(woe) * self.factor_
+                    -float(coef) * float(woe) * self.factor_
                 )
             scores += feature_points
 
@@ -272,8 +280,10 @@ class ScorecardBuilder:
         # Convert score to probability
         # odds = score - offset / factor
         # prob = odds / (odds + 1)
-        odds = np.exp((scores - self.offset_) / self.factor_)
-        prob = odds / (odds + 1)
+        # score = base_points_ - factor * sum(coef * WOE), and the model's
+        # log-odds of bad is intercept + sum(coef * WOE), so inverting gives:
+        log_odds_bad = (self.offset_ - scores) / self.factor_
+        prob = 1.0 / (1.0 + np.exp(-log_odds_bad))
 
         return np.column_stack([1 - prob, prob])
 
