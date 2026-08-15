@@ -12,6 +12,7 @@ import polars as pl
 
 from ..core.decorators import time_it
 from ..core.logger import logger
+from ..core.stats import weighted_quantile
 
 
 def accuracy(
@@ -256,7 +257,18 @@ def calculate_psi(
 
     if bin_type == "quantile":
         quantiles = np.linspace(0, 1, n_bins + 1)
-        bin_edges = [float(np.quantile(finite_expected, q)) for q in quantiles]
+        # Edges must split the weighted benchmark, not the raw sample. Under
+        # undersampling the two differ sharply: unweighted "deciles" held
+        # anywhere from 1% to 19% of the weighted population, so PSI put its
+        # resolution where the sample was dense rather than where the
+        # population actually lives.
+        expected_finite_weights = expected_weights[np.isfinite(expected_values)]
+        bin_edges = [
+            float(v)
+            for v in weighted_quantile(
+                finite_expected, quantiles, weights=expected_finite_weights
+            )
+        ]
         bin_edges[0] = float("-inf")
         bin_edges[-1] = float("inf")
     else:

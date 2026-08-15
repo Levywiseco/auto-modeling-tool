@@ -11,6 +11,7 @@ import numpy as np
 import polars as pl
 
 from ..core.decorators import time_it
+from ..core.exceptions import ValidationError
 from ..core.logger import logger
 
 
@@ -184,7 +185,18 @@ class ScorecardBuilder:
             raise RuntimeError("Scorecard not built. Call fit() first.")
 
         if isinstance(X, np.ndarray):
-            X = pl.DataFrame(X, schema=self.feature_names_)
+            # feature_names_ are the model's WOE column names (income_bin); the
+            # array holds raw drivers (income). Labelling raw columns with WOE
+            # names made binner.transform match nothing, so every row collapsed
+            # to offset_ — a constant score returned with no error at all.
+            raw_features = list(self.binner_.fitted_features_)
+            if X.ndim != 2 or X.shape[1] != len(raw_features):
+                raise ValidationError(
+                    f"Array must have one column per fitted driver, in fit order: "
+                    f"expected {len(raw_features)} ({raw_features}), "
+                    f"got shape {X.shape}. Pass a DataFrame to score by name."
+                )
+            X = pl.DataFrame(X, schema=raw_features)
         X_bins = self.binner_.transform(X, return_type="index")
         scores = np.full(len(X), self.offset_, dtype=float)
 

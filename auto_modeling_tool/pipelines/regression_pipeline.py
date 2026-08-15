@@ -162,6 +162,13 @@ class RegressionPipeline:
 
         sample_weight = None
         oot_weight = None
+        # The flag decides, not the mere presence of a column name. The shipped
+        # config carries use_sample_weight: false alongside weight_col: weight,
+        # so keying off the column alone made the same config train a weighted
+        # regression and an unweighted classification.
+        use_sample_weight = bool(kwargs.get("use_sample_weight", False))
+        if weight_col and not use_sample_weight:
+            weight_col = None
         if weight_col:
             if weight_col not in dev.columns or weight_col not in oot.columns:
                 raise ValidationError(f"Weight column '{weight_col}' not found in Dev/OOT data")
@@ -196,7 +203,18 @@ class RegressionPipeline:
         ):
             if early_eval == "oot":
                 eval_x = X_oot.to_numpy()
+                # The model is fitted on the transformed target, so the early
+                # stopping metric must be measured on the same scale. Passing
+                # raw OOT targets compares log-space predictions to raw labels:
+                # the curve is flat noise and best_iteration is chosen at random.
                 eval_y = self._y_oot.to_numpy()
+                if target_transform == "log1p":
+                    if np.nanmin(eval_y) < 0:
+                        raise ValidationError(
+                            "log1p target transform requires non-negative OOT targets "
+                            "when early_stopping_eval='oot'"
+                        )
+                    eval_y = np.log1p(eval_y)
                 eval_weight = oot_weight
             else:
                 indices = np.arange(len(y_fit))
