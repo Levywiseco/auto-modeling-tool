@@ -988,6 +988,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        样本权重
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1223,6 +1234,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        样本权重
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1303,6 +1325,27 @@
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="err">🔴</span> <span class="n">严重</span><span class="err">（</span><span class="n">需立即处理</span><span class="err">）</span>
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>  <span class="o">-</span> <span class="n">模型分</span> <span class="err">`</span><span class="n">score</span><span class="err">`</span> <span class="n">PSI</span> <span class="n">达</span> <span class="mf">0.3120</span><span class="err">（</span><span class="n">最新期</span> <span class="mf">0.3120</span><span class="err">），</span><span class="n">分布相对基准发生显著偏移</span>
 </code></pre></div>
+<h2 id="_1">样本权重</h2>
+<p><code>Monitor.monitor</code> 也接受权重，口径与建模阶段一致：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>use_sample_weight</code></td>
+<td>开启加权统计</td>
+</tr>
+<tr>
+<td><code>weight_col</code></td>
+<td>权重列名</td>
+</tr>
+</tbody>
+</table>
+<p>开启后 PSI、缺失率、坏率与分数趋势都按加权总体计算。</p>
 
 
 
