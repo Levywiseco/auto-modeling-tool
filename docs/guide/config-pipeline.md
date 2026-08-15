@@ -31,7 +31,7 @@ output:
   dir: output
 
 preprocess:
-  clean_strategy: median        # mean | median | zero
+  clean_strategy: median        # mean | median | zero | keep（保留缺失给 WOE）
   normalize_method: zscore      # minmax | zscore | robust
 
 binning:

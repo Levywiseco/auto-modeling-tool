@@ -239,6 +239,14 @@ class TestCleanStrategyContract:
             pre.fit(self._frame())
             assert pre.transform(self._frame())["income"].to_list()[2] == filled
 
+    def test_keep_leaves_nulls_for_the_binner(self):
+        """Missingness is signal; WOE gives it its own bin."""
+        from auto_modeling_tool.data.preprocess import DataPreprocessor
+
+        pre = DataPreprocessor(clean_strategy="keep", normalize_method=None)
+        pre.fit(self._frame())
+        assert pre.transform(self._frame())["income"].to_list()[2] is None
+
     def test_order_dependent_strategies_are_rejected(self):
         from auto_modeling_tool.core.exceptions import ValidationError
         from auto_modeling_tool.data.preprocess import DataPreprocessor
@@ -256,4 +264,4 @@ class TestCleanStrategyContract:
             a for a in _parser()._actions
             if "--clean-strategy" in (a.option_strings or [])
         )
-        assert set(action.choices) == {"mean", "median", "zero"}
+        assert set(action.choices) == {"mean", "median", "zero", "keep"}

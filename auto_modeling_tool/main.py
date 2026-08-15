@@ -302,7 +302,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--oot-label")
     parser.add_argument(
         "--clean-strategy",
-        choices=["mean", "median", "zero"],
+        choices=["mean", "median", "zero", "keep"],
     )
     parser.add_argument("--normalize-method", choices=["minmax", "zscore", "robust"])
     parser.add_argument("--min-samples-bin", type=int)

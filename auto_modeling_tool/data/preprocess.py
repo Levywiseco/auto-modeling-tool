@@ -375,6 +375,12 @@ class DataPreprocessor(MarsTransformer):
                 continue
             stats = self.stats_.get(col, {})
 
+            if self.clean_strategy == "keep":
+                # Leave nulls for WOE binning to place in its Missing bin.
+                # Missingness is often the strongest signal a credit feature
+                # carries — "no bureau record" — and imputing it first merges
+                # those applicants into the median bin, discarding the contrast.
+                continue
             if self.clean_strategy == "mean":
                 fill_val = stats.get("mean", 0)
             elif self.clean_strategy == "median":
@@ -389,7 +395,8 @@ class DataPreprocessor(MarsTransformer):
                 # time, where there is no previous row to carry forward.
                 raise ValidationError(
                     f"DataPreprocessor does not support clean_strategy "
-                    f"{self.clean_strategy!r}. Use 'mean', 'median' or 'zero'; "
+                    f"{self.clean_strategy!r}. Use 'mean', 'median', 'zero' or "
+                    f"'keep'; "
                     f"order-dependent fills such as 'forward'/'backward' are "
                     f"not reproducible at scoring time."
                 )

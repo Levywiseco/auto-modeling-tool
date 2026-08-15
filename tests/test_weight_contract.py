@@ -245,3 +245,58 @@ class TestScorecardArrayPath:
         card, frame = self._built()
         with pytest.raises(ValidationError, match="one column per fitted driver"):
             card.score(frame.to_numpy()[:, :2])
+
+
+class TestMissingnessSurvivesToWOE:
+    """Missingness is often the strongest signal a credit feature carries.
+
+    AutoPipeline always imputes before binning, so WoeBinner's Missing bin was
+    unreachable for model features and the missing-vs-observed contrast was
+    discarded. clean_strategy='keep' leaves nulls for the binner.
+    """
+
+    @staticmethod
+    def _informative_missingness(tmp_path):
+        rng = np.random.default_rng(9)
+        n = 2500
+        x = rng.normal(size=n)
+        missing = rng.random(n) < 0.25
+        # Applicants with no record default far more often.
+        target = np.where(
+            missing, rng.binomial(1, 0.6, n), rng.binomial(1, 0.15, n)
+        )
+        x = x.astype(float)
+        x[missing] = np.nan
+        csv = tmp_path / "d.csv"
+        pl.DataFrame({
+            "x": x,
+            "target": target,
+            "sample": ["dev"] * 2000 + ["oot"] * 500,
+        }).write_csv(csv)
+        return csv
+
+    def _binner_for(self, tmp_path, strategy):
+        from auto_modeling_tool.main import run_modeling_pipeline
+
+        result = run_modeling_pipeline(
+            str(self._informative_missingness(tmp_path)), "target",
+            output_dir=str(tmp_path / f"out_{strategy}"),
+            sample_col="sample", n_bins=8, min_samples_bin=20,
+            clean_strategy=strategy, archive_run=False,
+        )
+        return result["pipeline"].binner_, result["metrics"]
+
+    def test_imputing_hides_the_missing_bin(self, tmp_path):
+        binner, _ = self._binner_for(tmp_path, "median")
+        assert -1 not in binner.bin_woes_["x"]
+
+    def test_keep_exposes_the_missing_bin(self, tmp_path):
+        binner, _ = self._binner_for(tmp_path, "keep")
+        assert -1 in binner.bin_woes_["x"]
+        # The bin carries real signal, not noise.
+        assert abs(binner.bin_woes_["x"][-1]) > 0.5
+
+    def test_keep_recovers_discarded_information(self, tmp_path):
+        imputed, _ = self._binner_for(tmp_path, "median")
+        kept, _ = self._binner_for(tmp_path, "keep")
+        assert kept.total_iv_["x"] > imputed.total_iv_["x"]

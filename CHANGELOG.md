@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.3.0] - 2026-08-15
+
+### Added
+
+- **`clean_strategy: "keep"` — let missingness reach WOE.** `AutoPipeline` always
+  imputes before binning, so `WoeBinner`'s Missing bin was unreachable for model
+  features and the missing-vs-observed contrast was silently discarded. In credit
+  work that contrast is frequently the strongest signal a feature carries: "no
+  bureau record" is not a median applicant.
+
+  Measured on a fixture where the 25% missing group defaults at 0.60 against 0.14
+  for the rest: imputing gave IV 0.653 and no Missing bin; `keep` gave IV 1.020
+  with the Missing bin at WOE 1.44, and OOT AUC rose 0.676 to 0.716.
+
+  `keep` is safe through the classification pipeline because WOE maps every bin —
+  including Missing — to a numeric value before the model sees it.
+
 ## [3.2.0] - 2026-08-15
 
 Final batch from the adversarial audit. Six defects, five of which share one

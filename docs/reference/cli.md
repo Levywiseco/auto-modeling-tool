@@ -41,7 +41,7 @@
 
 | 参数 | 可选值 |
 |------|--------|
-| `--clean-strategy` | `mean` \| `median` \| `zero`，默认 `median` |
+| `--clean-strategy` | `mean` \| `median` \| `zero` \| `keep`，默认 `median`。`keep` 保留缺失交给 WOE 的 Missing 箱 |
 | `--normalize-method` | `minmax` \| `zscore` \| `robust` |
 | `--n-bins` | 分箱数 |
 | `--method` | `quantile` \| `uniform` \| `cart` |
